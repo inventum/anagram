@@ -249,7 +249,10 @@ pub fn ui_state(state: &GameState, affix: Option<&AffixHints>, theme: &ThemeDto)
             state
                 .workbench
                 .as_ref()
-                .map(|wb| workbench_dto(wb, state.input_focus, affix))
+                .map(|wb| {
+                    let solution = state.round.as_ref().map(|r| r.solution.as_str());
+                    workbench_dto(wb, state.input_focus, affix_dto(affix, solution))
+                })
         } else {
             None
         },
@@ -304,21 +307,38 @@ fn status_dto(status: &Status) -> StatusDto {
     }
 }
 
-fn workbench_dto(
-    wb: &LetterWorkbench,
-    focus: InputFocus,
-    affix: Option<&AffixHints>,
-) -> WorkbenchDto {
-    let affixes = match affix {
-        Some(a) => AffixDto {
-            starts: a.starts.clone(),
-            ends: a.ends.clone(),
-        },
-        None => AffixDto {
+/// Lowercased alphabetic letters of `s`; dashes and other marks are ignored.
+fn letters_lower(s: &str) -> String {
+    s.chars()
+        .filter(|c| c.is_alphabetic())
+        .flat_map(char::to_lowercase)
+        .collect()
+}
+
+/// GUI-only affix filter (core `affix_hints` is unchanged). Drops any starts/ends hint whose
+/// letters equal the round solution (case-insensitive). Ends are stored as `-suffix`, so the
+/// dash is ignored. No solution or no hints yields empty lists.
+fn affix_dto(hints: Option<&AffixHints>, solution: Option<&str>) -> AffixDto {
+    let (Some(h), Some(sol)) = (hints, solution) else {
+        return AffixDto {
             starts: Vec::new(),
             ends: Vec::new(),
-        },
+        };
     };
+    let sol = letters_lower(sol);
+    let keep = |list: &[String]| -> Vec<String> {
+        list.iter()
+            .filter(|s| letters_lower(s) != sol)
+            .cloned()
+            .collect()
+    };
+    AffixDto {
+        starts: keep(&h.starts),
+        ends: keep(&h.ends),
+    }
+}
+
+fn workbench_dto(wb: &LetterWorkbench, focus: InputFocus, affixes: AffixDto) -> WorkbenchDto {
     WorkbenchDto {
         layout: LayoutDto::Grid,
         rows: wb.rows,
@@ -511,6 +531,55 @@ mod tests {
         assert_eq!(v["workbench"]["affixes"]["starts"], json!(["cr"]));
         let v = snapshot(&state, None);
         assert_eq!(v["workbench"]["affixes"]["starts"], json!([]));
+    }
+
+    #[test]
+    fn full_length_affix_hints_are_dropped() {
+        let mut state = playing("crate");
+        let solution = state.round.as_ref().expect("round").solution.clone();
+        state.workbench = Some(LetterWorkbench::from_solution(
+            &solution,
+            5,
+            5,
+            &mut StdRng::seed_from_u64(3),
+        ));
+        let lower = solution.to_lowercase();
+        let h = AffixHints {
+            starts: vec![lower.clone(), "cr".into()],
+            ends: vec![format!("-{lower}"), "-ate".into()],
+        };
+        let v = snapshot(&state, Some(&h));
+        assert_eq!(v["workbench"]["affixes"]["starts"], json!(["cr"]));
+        assert_eq!(v["workbench"]["affixes"]["ends"], json!(["-ate"]));
+        for list in ["starts", "ends"] {
+            for s in v["workbench"]["affixes"][list].as_array().expect("list") {
+                assert_ne!(letters_lower(s.as_str().expect("str")), letters_lower(&solution));
+            }
+        }
+    }
+
+    #[test]
+    fn solution_never_in_workbench_affixes() {
+        use anagram::affix_hints::affix_hints;
+        for word in ["crate", "aliment", "affirm", "timbered"] {
+            let mut state = playing(word);
+            let solution = state.round.as_ref().expect("round").solution.clone();
+            let raw = affix_hints(state.round.as_ref().expect("round"));
+            state.workbench = Some(LetterWorkbench::from_solution(
+                &solution,
+                5,
+                5,
+                &mut StdRng::seed_from_u64(3),
+            ));
+            let v = snapshot(&state, Some(&raw));
+            let sol = letters_lower(&solution);
+            for list in ["starts", "ends"] {
+                for s in v["workbench"]["affixes"][list].as_array().expect("list") {
+                    let s = s.as_str().expect("str");
+                    assert_ne!(letters_lower(s), sol, "{word}: full-length {list} hint {s}");
+                }
+            }
+        }
     }
 
     #[test]
