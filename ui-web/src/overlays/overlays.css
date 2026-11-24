@@ -1,0 +1,188 @@
+/* Overlay layers. Stacking: custom input/pick < help < confirm. */
+[data-overlays] {
+  display: contents;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  box-sizing: border-box;
+  background: var(--scrim, rgba(0, 0, 0, 0.5));
+}
+
+.overlay[hidden] {
+  display: none;
+}
+
+.overlay--help {
+  z-index: 200;
+}
+
+.overlay--confirm {
+  z-index: 300;
+}
+
+.overlay__panel {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 420px;
+  max-height: 100%;
+  overflow: auto;
+  display: grid;
+  gap: 12px;
+  padding: 20px;
+  background: var(--surface, Canvas);
+  color: var(--text, CanvasText);
+  border: 1px solid var(--border, GrayText);
+  border-radius: 10px;
+  box-shadow: var(--shadow, 0 8px 32px rgba(0, 0, 0, 0.4));
+}
+
+.overlay__panel--compact {
+  max-width: 380px;
+}
+
+.overlay__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.overlay__title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 650;
+}
+
+.overlay__label {
+  margin: 0;
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.overlay__field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 2.5em;
+  margin: 0;
+  padding: 8px 12px;
+  border: 1px solid var(--border, GrayText);
+  border-radius: 6px;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  font-variant-numeric: tabular-nums;
+}
+
+.overlay__count {
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: normal;
+  opacity: 0.7;
+}
+
+.overlay__status {
+  margin: 0;
+  font-size: 14px;
+}
+
+.overlay__hint {
+  margin: 0;
+  font-size: 13px;
+  opacity: 0.7;
+}
+
+.overlay__pick {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--border, GrayText);
+  border-radius: 6px;
+}
+
+.overlay__pick-row {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 12px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--border, GrayText);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.overlay__pick-row:first-child {
+  border-top: 0;
+}
+
+.overlay__pick-row[aria-selected="true"] {
+  background: rgba(127, 127, 127, 0.2);
+  box-shadow: inset 3px 0 0 currentColor;
+}
+
+.overlay__pick-word {
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.overlay__pick-def {
+  opacity: 0.75;
+}
+
+.overlay__keys {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.overlay__keys th,
+.overlay__keys td {
+  padding: 6px 0;
+  border-top: 1px solid var(--border, GrayText);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.overlay__keys th {
+  width: 42%;
+  font-weight: 500;
+}
+
+.overlay__keys td {
+  opacity: 0.75;
+}
+
+.overlay__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.overlay button {
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--border, GrayText);
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.overlay__primary {
+  font-weight: 650;
+}
+
+.overlay__danger {
+  border-color: #c0392b;
+  color: #c0392b;
+}
