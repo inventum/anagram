@@ -23,6 +23,9 @@ const CSS = `
 .wb-hold { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; box-sizing: border-box; border: 1px dashed #666; border-radius: 4px; text-transform: uppercase; font-weight: 600; }
 .wb-hold:not(:empty) { border-style: solid; color: var(--pool, #00ffff); }
 .wb-pool { display: flex; flex-wrap: wrap; gap: 6px; }
+.wb-pool-row { align-items: flex-start; }
+.wb-pool-row > .wb-label { min-height: 32px; display: flex; align-items: center; }
+.wb-pool-row > .wb-pool { flex: 1 1 0; min-width: 0; }
 .wb-tile { display: inline-flex; align-items: center; justify-content: center; min-width: 32px; height: 32px; padding: 0 6px; box-sizing: border-box; border: 1px solid #666; border-radius: 4px; cursor: pointer; user-select: none; text-transform: uppercase; font-weight: 600; color: var(--pool, #00ffff); background-color: #1c2029; }
 .wb-chips { display: flex; flex-wrap: wrap; gap: 4px; }
 .wb-chip { font-family: ui-monospace, monospace; padding: 2px 8px; border: 1px solid #666; border-radius: 999px; }

@@ -56,15 +56,18 @@ function build(root: HTMLElement): Parts {
   const ends = make('div', 'wb-chips');
   ends.id = 'wb-ends';
 
+  const poolRow = row('Pool', pool);
+  poolRow.classList.add('wb-pool-row');
+
   const side = make('div', 'wb-side');
   const patterns = make('div', 'wb-side');
   patterns.append(make('span', 'wb-label', 'Patterns'), row('Prefix', starts), row('Suffix', ends));
-  side.append(row('Hand', held), row('Pool', pool), patterns);
+  side.append(row('Hand', held), patterns);
 
   const body = make('div', 'wb-body');
   body.append(grid, side);
 
-  root.replaceChildren(head, body);
+  root.replaceChildren(head, poolRow, body);
   return { grid, held, pool, starts, ends };
 }
 
