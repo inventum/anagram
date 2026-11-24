@@ -1,5 +1,7 @@
 //! Letter workbench (cue grid) — pure state; no dictionary.
 
+use std::collections::HashSet;
+
 use rand::seq::SliceRandom;
 use rand::Rng;
 
@@ -11,6 +13,8 @@ pub struct LetterWorkbench {
     pub pool: Vec<char>,
     pub cursor: usize,
     pub held: Option<char>,
+    /// Solution letters (uppercase, identity order). Used by the identity guard in `reset_grid`.
+    solution: Vec<char>,
 }
 
 impl LetterWorkbench {
@@ -18,8 +22,9 @@ impl LetterWorkbench {
         let solution: String = word.to_ascii_uppercase();
         let len = solution.len();
         let cell_count = (rows as usize) * (cols as usize);
-        let mut pool: Vec<char> = solution.chars().collect();
-        pool.shuffle(rng);
+        let identity: Vec<char> = solution.chars().collect();
+        let mut pool = identity.clone();
+        shuffle_not_identity(&mut pool, &identity, rng);
         let wb = Self {
             rows,
             cols,
@@ -27,6 +32,7 @@ impl LetterWorkbench {
             pool,
             cursor: 0,
             held: None,
+            solution: identity,
         };
         wb.debug_assert_invariant(len);
         wb
@@ -113,6 +119,43 @@ impl LetterWorkbench {
         true
     }
 
+    /// Pointer click on a cell. Returns `false` if out of range or a no-op (hand empty, cell empty).
+    pub fn click_cell(&mut self, idx: usize) -> bool {
+        if idx >= self.cells.len() {
+            return false;
+        }
+        self.cursor = idx;
+        let n = self.n_letters();
+        match (self.held, self.cells[idx]) {
+            (None, None) => return false,
+            (None, Some(letter)) => {
+                self.held = Some(letter);
+                self.cells[idx] = None;
+            }
+            (Some(held), None) => {
+                self.cells[idx] = Some(held);
+                self.held = None;
+            }
+            (Some(held), Some(cell_letter)) => {
+                self.cells[idx] = Some(held);
+                self.held = Some(cell_letter);
+            }
+        }
+        self.debug_assert_invariant(n);
+        true
+    }
+
+    /// Pointer click on a workbench pool tile: pick it up. No-op while holding (D-1).
+    pub fn click_pool(&mut self, idx: usize) -> bool {
+        if self.held.is_some() || idx >= self.pool.len() {
+            return false;
+        }
+        let n = self.n_letters();
+        self.held = Some(self.pool.remove(idx));
+        self.debug_assert_invariant(n);
+        true
+    }
+
     /// Type into the cursor cell from the grid pool (empty cell only).
     pub fn try_type_letter(&mut self, ch: char) -> bool {
         if !ch.is_ascii_alphabetic() {
@@ -146,9 +189,21 @@ impl LetterWorkbench {
         for cell in &mut self.cells {
             *cell = None;
         }
-        letters.shuffle(rng);
+        shuffle_not_identity(&mut letters, &self.solution, rng);
         self.pool = letters;
         self.debug_assert_invariant(n);
+    }
+}
+
+/// Shuffle avoiding the identity order when the word has more than one distinct letter.
+/// Same rule as `game::shuffle_pool_not_identity` (SPEC.md §5.2); `game.rs` is unchanged.
+fn shuffle_not_identity(letters: &mut [char], identity: &[char], rng: &mut impl Rng) {
+    let distinct = identity.iter().collect::<HashSet<_>>().len();
+    loop {
+        letters.shuffle(rng);
+        if distinct <= 1 || letters.iter().ne(identity.iter()) {
+            break;
+        }
     }
 }
 
@@ -352,5 +407,118 @@ mod tests {
         let mut rng = StdRng::seed_from_u64(21);
         wb.reset_grid(&mut rng);
         assert_invariant(&wb, 7);
+    }
+
+    #[test]
+    fn click_cell_empty_hand_empty_cell_is_noop() {
+        let mut wb = wb("cat", 5, 5, 30);
+        assert!(!wb.click_cell(7));
+        assert_eq!(wb.cells[7], None);
+        assert_eq!(wb.held, None);
+        assert_eq!(wb.cursor, 7);
+        assert_invariant(&wb, 3);
+    }
+
+    #[test]
+    fn click_cell_empty_hand_filled_cell_picks_up() {
+        let mut wb = wb("cat", 5, 5, 31);
+        assert!(wb.pick_place_swap());
+        let placed = wb.cells[0].unwrap();
+        wb.cursor = 4;
+        assert!(wb.click_cell(0));
+        assert_eq!(wb.cells[0], None);
+        assert_eq!(wb.held, Some(placed));
+        assert_eq!(wb.cursor, 0);
+        assert_invariant(&wb, 3);
+    }
+
+    #[test]
+    fn click_cell_hand_filled_cell_empty_places() {
+        let mut wb = wb("cat", 5, 5, 32);
+        assert!(wb.click_pool(0));
+        let held = wb.held.unwrap();
+        assert!(wb.click_cell(3));
+        assert_eq!(wb.cells[3], Some(held));
+        assert_eq!(wb.held, None);
+        assert_invariant(&wb, 3);
+    }
+
+    #[test]
+    fn click_cell_hand_filled_cell_filled_swaps() {
+        let mut wb = wb("cat", 5, 5, 33);
+        assert!(wb.click_pool(0));
+        let first = wb.held.unwrap();
+        assert!(wb.click_cell(0));
+        assert!(wb.click_pool(0));
+        let second = wb.held.unwrap();
+        assert!(wb.click_cell(0));
+        assert_eq!(wb.cells[0], Some(second));
+        assert_eq!(wb.held, Some(first));
+        assert_invariant(&wb, 3);
+    }
+
+    #[test]
+    fn click_cell_out_of_range_is_false() {
+        let mut wb = wb("cat", 4, 4, 34);
+        assert!(!wb.click_cell(16));
+        assert_eq!(wb.cursor, 0);
+        assert_invariant(&wb, 3);
+    }
+
+    #[test]
+    fn click_pool_pick_then_noop_while_holding() {
+        let mut wb = wb("cat", 5, 5, 35);
+        let first = wb.pool[1];
+        assert!(wb.click_pool(1));
+        assert_eq!(wb.held, Some(first));
+        assert_eq!(wb.pool.len(), 2);
+        assert!(!wb.click_pool(0));
+        assert_eq!(wb.pool.len(), 2);
+        assert_invariant(&wb, 3);
+    }
+
+    #[test]
+    fn click_pool_out_of_range_is_false() {
+        let mut wb = wb("cat", 5, 5, 36);
+        assert!(!wb.click_pool(3));
+        assert_eq!(wb.held, None);
+        assert_invariant(&wb, 3);
+    }
+
+    #[test]
+    fn invariant_after_click_sequence() {
+        let mut wb = wb("letters", 5, 5, 37);
+        for step in 0..40usize {
+            let idx = (step * 7) % 25;
+            if step % 3 == 0 {
+                let _ = wb.click_pool(idx % wb.pool.len().max(1));
+            } else {
+                let _ = wb.click_cell(idx);
+            }
+            assert_invariant(&wb, 7);
+        }
+    }
+
+    #[test]
+    fn identity_guard_from_solution_crate_50_seeds() {
+        for seed in 0..50u64 {
+            let mut rng = StdRng::seed_from_u64(seed);
+            let wb = LetterWorkbench::from_solution("crate", 5, 5, &mut rng);
+            let identity: Vec<char> = "CRATE".chars().collect();
+            assert_ne!(wb.pool, identity, "seed {seed}");
+            assert_invariant(&wb, 5);
+        }
+    }
+
+    #[test]
+    fn identity_guard_reset_grid_crate_50_seeds() {
+        for seed in 0..50u64 {
+            let mut wb = wb("crate", 5, 5, 38);
+            let mut rng = StdRng::seed_from_u64(seed);
+            wb.reset_grid(&mut rng);
+            let identity: Vec<char> = "CRATE".chars().collect();
+            assert_ne!(wb.pool, identity, "seed {seed}");
+            assert_invariant(&wb, 5);
+        }
     }
 }
