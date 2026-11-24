@@ -1,0 +1,1219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>Anagram Desktop · UI wireframe</title>
+  <style>
+    /* ==========================================================================
+       Tokens
+       ========================================================================== */
+    :root {
+      color-scheme: dark;
+      --bg: #0F1115;
+      --surface: #1C2029;
+      --surface-2: #232834;
+      --titlebar: #171A21;
+      --border: #2C3340;
+      --text: #E6E9EF;
+      --muted: #8A93A6;
+      --empty: #FF7AD9;
+      --filled: #FFD54A;
+      --pool: #5FE3EA;
+      --correct: #6EE787;
+      --wrong: #FF6B6B;
+      --scrim: rgba(7, 9, 12, 0.6);
+      --tile-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 32px rgba(0, 0, 0, 0.45);
+
+      --s-1: 4px;
+      --s-2: 8px;
+      --s-3: 12px;
+      --s-4: 16px;
+      --s-6: 24px;
+      --s-8: 32px;
+
+      --r-tile: 10px;
+      --r-panel: 14px;
+      --r-key: 6px;
+
+      --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, Roboto, sans-serif;
+    }
+
+    @media (prefers-color-scheme: light) {
+      :root {
+        color-scheme: light;
+        --bg: #FAFAF7;
+        --surface: #FFFFFF;
+        --surface-2: #F4F5F8;
+        --titlebar: #EEF0F4;
+        --border: #D9DCE3;
+        --text: #1B1F28;
+        --muted: #5B6474;
+        --empty: #A61E78;
+        --filled: #8A6100;
+        --pool: #0B7285;
+        --correct: #1A7F37;
+        --wrong: #C92A2A;
+        --scrim: rgba(27, 31, 40, 0.35);
+        --tile-shadow: 0 2px 6px rgba(27, 31, 40, 0.12);
+        --shadow: 0 1px 2px rgba(27, 31, 40, 0.08), 0 12px 32px rgba(27, 31, 40, 0.12);
+      }
+    }
+
+    /* ==========================================================================
+       Base
+       ========================================================================== */
+    *, *::before, *::after { box-sizing: border-box; }
+
+    html { -webkit-text-size-adjust: 100%; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 15px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    h1, h2, h3, p, ul, ol, dl, dd, figure { margin: 0; }
+    ul, ol { padding: 0; list-style: none; }
+    button { font: inherit; color: inherit; }
+
+    :focus-visible {
+      outline: 2px solid var(--pool);
+      outline-offset: 2px;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    kbd {
+      display: inline-block;
+      min-width: 22px;
+      padding: 1px 6px;
+      border: 1px solid var(--border);
+      border-bottom-width: 2px;
+      border-radius: var(--r-key);
+      background: var(--surface-2);
+      color: var(--text);
+      font: 600 12px/1.6 var(--font);
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .muted { color: var(--muted); font-size: 13px; }
+
+    /* ==========================================================================
+       Page
+       ========================================================================== */
+    .page {
+      max-width: 1040px;
+      margin: 0 auto;
+      padding: var(--s-8) var(--s-6);
+      display: grid;
+      gap: var(--s-8);
+    }
+
+    .page-head h1 {
+      font-size: 22px;
+      font-weight: 650;
+      letter-spacing: -0.01em;
+    }
+
+    .page-head p {
+      margin-top: var(--s-1);
+      color: var(--muted);
+    }
+
+    .stage {
+      display: grid;
+      justify-items: center;
+      gap: var(--s-4);
+    }
+
+    .stage--tabs { gap: var(--s-6); }
+
+    /* ==========================================================================
+       macOS window frame
+       ========================================================================== */
+    .window {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-panel);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .window--main { max-width: 960px; }
+    .window--mini { max-width: 560px; }
+
+    .titlebar {
+      position: relative;
+      display: flex;
+      align-items: center;
+      height: 38px;
+      padding: 0 var(--s-3);
+      background: var(--titlebar);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .titlebar__title {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+      pointer-events: none;
+    }
+
+    .lights {
+      display: flex;
+      gap: var(--s-2);
+      z-index: 1;
+    }
+
+    .light {
+      display: block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.25);
+    }
+    .light--close { background: #FF5F57; }
+    .light--min { background: #FEBC2E; }
+    .light--max { background: #28C840; }
+
+    .window__body {
+      container-type: inline-size;
+      padding: var(--s-6);
+      display: grid;
+      gap: var(--s-6);
+    }
+
+    /* ==========================================================================
+       Main play window
+       ========================================================================== */
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--s-3) var(--s-4);
+      padding-bottom: var(--s-4);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .length {
+      display: flex;
+      align-items: center;
+      gap: var(--s-3);
+      flex: 1 1 260px;
+      min-width: 0;
+    }
+
+    .length input[type="range"] {
+      flex: 1;
+      min-width: 120px;
+      accent-color: var(--pool);
+    }
+
+    .length output {
+      min-width: 2ch;
+      font-size: 16px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      text-align: center;
+    }
+
+    .toolbar__actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--s-2);
+      margin-left: auto;
+    }
+
+    .app-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--s-3);
+    }
+
+    .puzzle-title {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+    }
+
+    .puzzle-title span { color: var(--muted); font-weight: 500; letter-spacing: 0.02em; }
+
+    .app-header__actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--s-2);
+    }
+
+    .counter {
+      padding: 0 var(--s-2);
+      color: var(--muted);
+      font-size: 13px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--s-2);
+      min-height: 32px;
+      padding: var(--s-1) var(--s-3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface-2);
+      color: var(--text);
+      font-size: 13px;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+
+    .btn:hover { border-color: var(--pool); }
+
+    .btn--danger { color: var(--wrong); border-color: var(--wrong); }
+
+    .btn--icon {
+      width: 32px;
+      padding: 0;
+      justify-content: center;
+      font-weight: 700;
+    }
+
+    .play {
+      display: grid;
+      gap: var(--s-6);
+      align-items: start;
+    }
+
+    @container (min-width: 880px) {
+      .play { grid-template-columns: minmax(0, 1fr) 300px; }
+    }
+
+    .board {
+      display: grid;
+      gap: var(--s-3);
+      justify-items: start;
+      padding: var(--s-6);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--r-panel);
+    }
+
+    .board .label { margin-top: var(--s-2); }
+    .board .label:first-child { margin-top: 0; }
+
+    .pool {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--s-2);
+    }
+
+    .tile {
+      display: grid;
+      place-items: center;
+      width: 56px;
+      height: 56px;
+      border: 1px solid var(--border);
+      border-radius: var(--r-tile);
+      background: var(--surface-2);
+      color: var(--pool);
+      font-size: 24px;
+      font-weight: 700;
+      box-shadow: var(--tile-shadow);
+      transition: transform 150ms ease, box-shadow 150ms ease;
+    }
+
+    .tile:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 14px rgba(0, 0, 0, 0.2);
+    }
+
+    .answer {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--s-2);
+    }
+
+    .slot {
+      position: relative;
+      display: grid;
+      place-items: center;
+      width: 56px;
+      height: 56px;
+      border: 2px dashed var(--empty);
+      border-radius: var(--r-tile);
+      color: var(--filled);
+      font-size: 24px;
+      font-weight: 700;
+    }
+
+    .slot.is-filled {
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+    }
+
+    .slot[aria-current="true"] {
+      outline: 2px solid var(--pool);
+      outline-offset: 3px;
+    }
+
+    .answer.is-wrong .slot {
+      border: 2px solid var(--wrong);
+      color: var(--wrong);
+    }
+
+    .slot.is-correct {
+      border: 2px solid var(--correct);
+      color: var(--correct);
+      background: color-mix(in srgb, var(--correct) 14%, transparent);
+    }
+
+    .mark {
+      position: absolute;
+      top: 3px;
+      right: 5px;
+      font-size: 10px;
+      line-height: 1;
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: var(--s-2);
+      min-height: 24px;
+      color: var(--wrong);
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .side {
+      display: grid;
+      gap: var(--s-4);
+      align-content: start;
+    }
+
+    .panel {
+      padding: var(--s-4) var(--s-6);
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--r-panel);
+    }
+
+    .clue__text {
+      margin-top: var(--s-2);
+      font-size: 18px;
+      line-height: 1.4;
+    }
+
+    .workbench summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--s-2);
+      min-height: 24px;
+      cursor: pointer;
+      list-style: none;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .workbench summary::-webkit-details-marker { display: none; }
+
+    .workbench summary::after {
+      content: "▾";
+      transition: transform 150ms ease;
+    }
+
+    .workbench[open] summary::after { transform: rotate(180deg); }
+    .workbench[open] summary { margin-bottom: var(--s-3); }
+
+    .workbench__grid {
+      display: grid;
+      grid-template-columns: repeat(5, 28px);
+      gap: var(--s-1);
+    }
+
+    .cell {
+      display: grid;
+      place-items: center;
+      height: 28px;
+      border: 1px dashed var(--border);
+      border-radius: var(--r-key);
+      color: var(--pool);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .cell.is-on { border: 1px solid var(--pool); }
+    .cell.is-cursor { outline: 2px solid var(--pool); outline-offset: 1px; }
+
+    .wb-pool {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--s-1);
+      margin-bottom: var(--s-3);
+    }
+
+    .wb-tile {
+      display: grid;
+      place-items: center;
+      width: 28px;
+      height: 28px;
+      border: 1px solid var(--border);
+      border-radius: var(--r-key);
+      background: var(--surface-2);
+      color: var(--pool);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .wb-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--s-2);
+      margin-top: var(--s-3);
+    }
+
+    .wb-caption {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .patterns {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: var(--s-1) var(--s-3);
+      margin-top: var(--s-3);
+      font-size: 13px;
+    }
+
+    .patterns dt { color: var(--muted); }
+    .patterns dd { font-weight: 600; letter-spacing: 0.08em; }
+
+    .keyhints {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--s-2) var(--s-4);
+      padding-top: var(--s-4);
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .keyhints span {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--s-1);
+    }
+
+    /* ==========================================================================
+       Caption, legend, and controls
+       ========================================================================== */
+    .caption {
+      display: grid;
+      justify-items: center;
+      gap: var(--s-3);
+      text-align: center;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .caption strong { color: var(--text); font-weight: 600; }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: var(--s-2) var(--s-4);
+      font-size: 13px;
+    }
+
+    .legend li {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--s-2);
+    }
+
+    .swatch {
+      width: 14px;
+      height: 14px;
+      border-radius: var(--r-key);
+      border: 2px solid;
+    }
+    .swatch--empty { border-style: dashed; border-color: var(--empty); }
+    .swatch--filled { border-color: var(--filled); background: var(--surface-2); }
+    .swatch--pool { border-color: var(--pool); background: var(--surface-2); }
+    .swatch--correct { border-color: var(--correct); }
+    .swatch--wrong { border-color: var(--wrong); }
+
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: var(--s-2);
+    }
+
+    .tab[aria-selected="true"] {
+      border-color: var(--pool);
+      color: var(--pool);
+    }
+
+    .tabpanel {
+      display: grid;
+      justify-items: center;
+      gap: var(--s-4);
+      width: 100%;
+    }
+
+    .tabpanel[hidden] { display: none; }
+
+    /* ==========================================================================
+       Secondary mini windows
+       ========================================================================== */
+    .screen {
+      display: grid;
+      gap: var(--s-4);
+      padding: var(--s-6);
+    }
+
+    .screen h3 {
+      font-size: 17px;
+      font-weight: 650;
+    }
+
+    .chips {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+      gap: var(--s-2);
+    }
+
+    .chip {
+      display: grid;
+      justify-items: center;
+      gap: var(--s-1);
+      padding: var(--s-3) 0;
+      border: 1px solid var(--border);
+      border-radius: var(--r-tile);
+      background: var(--surface-2);
+      font-size: 22px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .chip:hover { border-color: var(--pool); }
+
+    .chip[aria-pressed="true"] {
+      border-color: var(--pool);
+      color: var(--pool);
+    }
+
+    .chip kbd {
+      min-width: 0;
+      padding: 0 var(--s-1);
+      font-size: 10px;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--s-2);
+    }
+
+    .actions .btn kbd { font-size: 11px; }
+
+    .field {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--s-2) var(--s-3);
+      border: 1px solid var(--border);
+      border-radius: var(--r-tile);
+      background: var(--bg);
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+    }
+
+    .pick {
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: var(--r-tile);
+    }
+
+    .pick__row {
+      display: grid;
+      grid-template-columns: 96px 1fr;
+      gap: var(--s-3);
+      padding: var(--s-2) var(--s-3);
+      border-top: 1px solid var(--border);
+      font-size: 14px;
+    }
+
+    .pick__row:first-child { border-top: 0; }
+
+    .pick__row[aria-selected="true"] {
+      background: color-mix(in srgb, var(--pool) 14%, transparent);
+      box-shadow: inset 3px 0 0 var(--pool);
+    }
+
+    .pick__word {
+      font-weight: 700;
+      letter-spacing: 0.08em;
+    }
+
+    .pick__row[aria-selected="true"] .pick__word { color: var(--pool); }
+
+    .pick__def { color: var(--muted); }
+
+    .banner {
+      display: flex;
+      align-items: center;
+      gap: var(--s-2);
+      padding: var(--s-3) var(--s-4);
+      border: 1px solid var(--correct);
+      border-radius: var(--r-tile);
+      background: color-mix(in srgb, var(--correct) 12%, transparent);
+      color: var(--correct);
+      font-weight: 600;
+    }
+
+    .solved {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--s-2);
+    }
+
+    .solved .slot { width: 48px; height: 48px; font-size: 20px; }
+
+    .stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--s-6);
+      font-size: 14px;
+    }
+
+    .stats dt { color: var(--muted); font-size: 12px; }
+    .stats dd { font-size: 18px; font-weight: 650; font-variant-numeric: tabular-nums; }
+
+    .scene {
+      position: relative;
+      min-height: 440px;
+      overflow: hidden;
+      display: grid;
+      align-content: start;
+      gap: var(--s-3);
+      padding: var(--s-6);
+    }
+
+    .scene .board {
+      opacity: 0.35;
+      pointer-events: none;
+    }
+
+    .scene .board .slot { width: 44px; height: 44px; font-size: 20px; }
+    .scene .board .tile { width: 44px; height: 44px; font-size: 20px; }
+
+    .scrim {
+      position: absolute;
+      inset: 0;
+      background: var(--scrim);
+    }
+
+    .modal {
+      position: absolute;
+      inset: var(--s-4);
+      margin: auto;
+      display: grid;
+      align-content: start;
+      gap: var(--s-4);
+      max-width: 380px;
+      max-height: calc(100% - var(--s-8));
+      overflow: auto;
+      padding: var(--s-6);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-panel);
+      box-shadow: var(--shadow);
+    }
+
+    .modal--compact {
+      top: 50%;
+      bottom: auto;
+      transform: translateY(-50%);
+    }
+
+    .modal__head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--s-3);
+    }
+
+    .modal__head h3 { font-size: 17px; font-weight: 650; }
+
+    .keys {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    .keys th,
+    .keys td {
+      padding: var(--s-2) 0;
+      border-top: 1px solid var(--border);
+      text-align: left;
+      vertical-align: middle;
+    }
+
+    .keys th {
+      width: 42%;
+      font-weight: 500;
+    }
+
+    .keys td { color: var(--muted); }
+
+    /* ==========================================================================
+       Responsive and motion
+       ========================================================================== */
+    @media (max-width: 520px) {
+      .page { padding: var(--s-6) var(--s-4); }
+      .window__body, .screen { padding: var(--s-4); }
+      .board { padding: var(--s-4); }
+      .tile, .slot { width: 44px; height: 44px; font-size: 20px; }
+      .solved .slot { width: 40px; height: 40px; font-size: 18px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .tile { transition: none; }
+      .tile:hover { transform: none; }
+      .workbench summary::after { transition: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+
+    <header class="page-head">
+      <h1>Anagram Desktop · UI wireframe</h1>
+      <p>High-fidelity presentation of the wireframe concept. Static mockup; no game logic.</p>
+    </header>
+
+    <main>
+      <!-- ================================================================
+           Figure 1 · Main play window
+           ================================================================ -->
+      <section class="stage" aria-labelledby="fig1-title">
+        <h2 id="fig1-title" class="sr-only">Main play window</h2>
+
+        <article class="window window--main" aria-label="Anagram play window">
+          <div class="titlebar">
+            <div class="lights" aria-hidden="true">
+              <span class="light light--close"></span>
+              <span class="light light--min"></span>
+              <span class="light light--max"></span>
+            </div>
+            <p class="titlebar__title">Anagram</p>
+          </div>
+
+          <div class="window__body">
+            <div class="toolbar" role="toolbar" aria-label="Puzzle controls">
+              <div class="length">
+                <label class="label" for="len-slider">Length</label>
+                <input id="len-slider" type="range" min="4" max="10" step="1" value="6" aria-describedby="len-value">
+                <output id="len-value" for="len-slider" aria-label="Puzzle length 6">6</output>
+              </div>
+              <div class="toolbar__actions">
+                <button class="btn" type="button" aria-label="Custom word">Custom word</button>
+                <button class="btn" type="button" aria-label="New puzzle">New puzzle</button>
+              </div>
+            </div>
+
+            <header class="app-header">
+              <h2 class="puzzle-title" id="play-title">ANAGRAM <span>· 6 letters</span></h2>
+              <div class="app-header__actions">
+                <p class="counter" aria-label="Clue 1 of 3">Clue 1/3</p>
+                <button class="btn" type="button" aria-label="Next clue (Tab)">⇥ Next</button>
+                <button class="btn btn--icon" type="button" aria-label="Help (question mark)">?</button>
+              </div>
+            </header>
+
+            <div class="play">
+              <div class="board">
+                <p class="label" id="pool-label">Scrambled</p>
+                <ul class="pool" aria-labelledby="pool-label">
+                  <li class="tile">R</li>
+                  <li class="tile">E</li>
+                  <li class="tile">T</li>
+                  <li class="tile">E</li>
+                </ul>
+
+                <p class="label" id="answer-label">Your answer</p>
+                <ol class="answer" id="play-answer" aria-labelledby="answer-label">
+                  <li class="slot is-filled">C</li>
+                  <li class="slot is-filled">A</li>
+                  <li class="slot is-empty" aria-current="true"><span class="sr-only">Slot 3, empty, cursor</span></li>
+                  <li class="slot is-empty"><span class="sr-only">Slot 4, empty</span></li>
+                  <li class="slot is-empty"><span class="sr-only">Slot 5, empty</span></li>
+                  <li class="slot is-empty"><span class="sr-only">Slot 6, empty</span></li>
+                </ol>
+
+                <p class="status" id="play-status" role="status">
+                  <span aria-hidden="true">⚠</span>
+                  <span id="play-status-text">Letter not in pool.</span>
+                </p>
+              </div>
+
+              <aside class="side" aria-label="Clue and workbench">
+                <section class="panel" aria-labelledby="clue-label">
+                  <p class="label" id="clue-label">Clue</p>
+                  <p class="clue__text">To bring something new into being.</p>
+                </section>
+
+                <details class="panel workbench" open>
+                  <summary>Workbench (cue only)</summary>
+                  <p class="label" id="wb-pool-label">Workbench pool</p>
+                  <ul class="wb-pool" aria-labelledby="wb-pool-label">
+                    <li class="wb-tile">C</li>
+                    <li class="wb-tile">A</li>
+                    <li class="wb-tile">E</li>
+                  </ul>
+                  <div class="workbench__grid" role="group" aria-label="Workbench grid, 5 by 5, mostly empty">
+                    <div class="cell is-on">R</div>
+                    <div class="cell"></div>
+                    <div class="cell"></div>
+                    <div class="cell is-on">E</div>
+                    <div class="cell"></div>
+                    <div class="cell"></div>
+                    <div class="cell"></div>
+                    <div class="cell is-on">T</div>
+                    <div class="cell"></div>
+                    <div class="cell is-cursor"></div>
+                    <div class="cell"></div>
+                    <div class="cell"></div>
+                    <div class="cell"></div>
+                    <div class="cell"></div>
+                    <div class="cell"></div>
+                    <div class="cell"></div>
+                    <div class="cell"></div>
+                    <div class="cell"></div>
+                    <div class="cell"></div>
+                    <div class="cell"></div>
+                    <div class="cell"></div>
+                    <div class="cell"></div>
+                    <div class="cell"></div>
+                    <div class="cell"></div>
+                    <div class="cell"></div>
+                  </div>
+                  <div class="wb-actions">
+                    <p class="wb-caption">Click to select · click a cell to place · drag to move</p>
+                    <button class="btn" type="button" aria-label="Clear workbench">Clear</button>
+                  </div>
+                  <dl class="patterns">
+                    <dt>Prefix</dt>
+                    <dd>CRE… · CAR…</dd>
+                    <dt>Suffix</dt>
+                    <dd>…ATE · …TEE</dd>
+                  </dl>
+                </details>
+              </aside>
+            </div>
+
+            <footer class="keyhints">
+              <span><kbd>←</kbd><kbd>→</kbd> move</span>
+              <span><kbd>⌫</kbd> undo</span>
+              <span><kbd>Tab</kbd> clue</span>
+              <span><kbd>Ctrl+R</kbd> reset</span>
+              <span><kbd>?</kbd> help</span>
+            </footer>
+          </div>
+        </article>
+
+        <div class="caption">
+          <p><strong>Fig. 1</strong> · Play window with top toolbar (length slider, Custom word, New puzzle): Playing phase, answer focus, cursor on slot 3, last keystroke rejected.</p>
+          <ul class="legend" aria-label="Color legend">
+            <li><span class="swatch swatch--empty" aria-hidden="true"></span>Empty slot</li>
+            <li><span class="swatch swatch--filled" aria-hidden="true"></span>Filled letter</li>
+            <li><span class="swatch swatch--pool" aria-hidden="true"></span>Pool</li>
+            <li><span class="swatch swatch--correct" aria-hidden="true"></span>Correct</li>
+            <li><span class="swatch swatch--wrong" aria-hidden="true"></span>Wrong</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ================================================================
+           Figure 2 · Secondary screens (tab switch)
+           ================================================================ -->
+      <section class="stage stage--tabs" aria-labelledby="fig2-title">
+        <h2 id="fig2-title" class="sr-only">Secondary screens</h2>
+
+        <nav aria-label="Secondary screens">
+          <div class="tabs" role="tablist" aria-label="Screen">
+            <button class="btn tab" role="tab" type="button" id="tab-wrong" aria-controls="panel-wrong" aria-selected="true" tabindex="0">Wrong answer</button>
+            <button class="btn tab" role="tab" type="button" id="tab-custom" aria-controls="panel-custom" aria-selected="false" tabindex="-1">Custom word</button>
+            <button class="btn tab" role="tab" type="button" id="tab-won" aria-controls="panel-won" aria-selected="false" tabindex="-1">Won</button>
+            <button class="btn tab" role="tab" type="button" id="tab-help" aria-controls="panel-help" aria-selected="false" tabindex="-1">Help overlay</button>
+            <button class="btn tab" role="tab" type="button" id="tab-confirm" aria-controls="panel-confirm" aria-selected="false" tabindex="-1">Confirm abandon</button>
+          </div>
+        </nav>
+
+        <!-- Wrong answer (static preview) -->
+        <section class="tabpanel" role="tabpanel" id="panel-wrong" aria-labelledby="tab-wrong">
+          <article class="window window--mini" aria-label="Wrong answer preview">
+            <div class="titlebar">
+              <div class="lights" aria-hidden="true"><span class="light light--close"></span><span class="light light--min"></span><span class="light light--max"></span></div>
+              <p class="titlebar__title">Anagram — Wrong answer</p>
+            </div>
+            <div class="screen">
+              <p class="label" id="wrong-answer-label">Your answer</p>
+              <ol class="answer is-wrong" aria-labelledby="wrong-answer-label">
+                <li class="slot is-filled">T</li>
+                <li class="slot is-filled">R</li>
+                <li class="slot is-filled">A</li>
+                <li class="slot is-filled">C</li>
+                <li class="slot is-filled">E</li>
+                <li class="slot is-filled">E</li>
+              </ol>
+              <p class="status" role="status"><span aria-hidden="true">⚠</span> Not the answer. Backspace and try again.</p>
+            </div>
+          </article>
+          <p class="caption"><strong>Fig. 2a</strong> · Wrong answer: full answer submitted, slots red, text feedback. Static preview; no trigger.</p>
+        </section>
+
+        <!-- Custom word pick -->
+        <section class="tabpanel" role="tabpanel" id="panel-custom" aria-labelledby="tab-custom" hidden>
+          <article class="window window--mini" aria-label="Custom word pick screen">
+            <div class="titlebar">
+              <div class="lights" aria-hidden="true"><span class="light light--close"></span><span class="light light--min"></span><span class="light light--max"></span></div>
+              <p class="titlebar__title">Anagram — Custom word</p>
+            </div>
+            <div class="screen">
+              <h3>Several words match</h3>
+              <p class="label" id="scramble-label">Scramble</p>
+              <p class="field" aria-labelledby="scramble-label">ENLIST <span class="muted" aria-hidden="true">6</span></p>
+              <ul class="pick" role="listbox" aria-label="Matching words" aria-activedescendant="pick-4" tabindex="0">
+                <li class="pick__row" role="option" id="pick-1" aria-selected="false">
+                  <span class="pick__word">ENLIST</span>
+                  <span class="pick__def">To join the armed forces, or to secure someone's help.</span>
+                </li>
+                <li class="pick__row" role="option" id="pick-2" aria-selected="false">
+                  <span class="pick__word">INLETS</span>
+                  <span class="pick__def">Narrow bodies of water that extend into land.</span>
+                </li>
+                <li class="pick__row" role="option" id="pick-3" aria-selected="false">
+                  <span class="pick__word">LISTEN</span>
+                  <span class="pick__def">To give attention to a sound.</span>
+                </li>
+                <li class="pick__row" role="option" id="pick-4" aria-selected="true">
+                  <span class="pick__word">SILENT</span>
+                  <span class="pick__def">Making no sound; not speaking.</span>
+                </li>
+                <li class="pick__row" role="option" id="pick-5" aria-selected="false">
+                  <span class="pick__word">TINSEL</span>
+                  <span class="pick__def">Glittering strands used as decoration.</span>
+                </li>
+              </ul>
+              <p class="muted"><kbd>↑</kbd><kbd>↓</kbd> move · <kbd>Enter</kbd> start · <kbd>u</kbd> cancel · <kbd>Esc</kbd> quit</p>
+            </div>
+          </article>
+          <p class="caption"><strong>Fig. 2b</strong> · Custom word pick: highlighted candidate row with definitions.</p>
+        </section>
+
+        <!-- Won -->
+        <section class="tabpanel" role="tabpanel" id="panel-won" aria-labelledby="tab-won" hidden>
+          <article class="window window--mini" aria-label="Won screen">
+            <div class="titlebar">
+              <div class="lights" aria-hidden="true"><span class="light light--close"></span><span class="light light--min"></span><span class="light light--max"></span></div>
+              <p class="titlebar__title">Anagram — Solved</p>
+            </div>
+            <div class="screen">
+              <p class="banner" role="status"><span aria-hidden="true">✓</span> Correct — you solved it.</p>
+
+              <ul class="solved" aria-label="Solved answer, CREATE">
+                <li class="slot is-correct">C<span class="mark" aria-hidden="true">✓</span></li>
+                <li class="slot is-correct">R<span class="mark" aria-hidden="true">✓</span></li>
+                <li class="slot is-correct">E<span class="mark" aria-hidden="true">✓</span></li>
+                <li class="slot is-correct">A<span class="mark" aria-hidden="true">✓</span></li>
+                <li class="slot is-correct">T<span class="mark" aria-hidden="true">✓</span></li>
+                <li class="slot is-correct">E<span class="mark" aria-hidden="true">✓</span></li>
+              </ul>
+
+              <dl class="stats">
+                <div>
+                  <dt>Solution</dt>
+                  <dd>CREATE</dd>
+                </div>
+                <div>
+                  <dt>Clues used</dt>
+                  <dd>2 of 3</dd>
+                </div>
+                <div>
+                  <dt>Length</dt>
+                  <dd>6</dd>
+                </div>
+              </dl>
+
+              <div class="actions">
+                <button class="btn" type="button" aria-label="New puzzle, same size">New <kbd>n</kbd></button>
+                <button class="btn" type="button" aria-label="Custom word">Custom <kbd>i</kbd></button>
+                <button class="btn" type="button" aria-label="Reset round">Reset <kbd>r</kbd></button>
+                <button class="btn" type="button" aria-label="Help">Help <kbd>?</kbd></button>
+              </div>
+            </div>
+          </article>
+          <p class="caption"><strong>Fig. 2c</strong> · Won: correct banner, all tiles green with check marks, solution revealed, clues used.</p>
+        </section>
+
+        <!-- Help overlay -->
+        <section class="tabpanel" role="tabpanel" id="panel-help" aria-labelledby="tab-help" hidden>
+          <article class="window window--mini" aria-label="Help overlay">
+            <div class="titlebar">
+              <div class="lights" aria-hidden="true"><span class="light light--close"></span><span class="light light--min"></span><span class="light light--max"></span></div>
+              <p class="titlebar__title">Anagram — Help</p>
+            </div>
+            <div class="scene">
+              <div class="board" aria-hidden="true">
+                <p class="label">Scrambled</p>
+                <div class="pool">
+                  <span class="tile">R</span><span class="tile">E</span><span class="tile">T</span><span class="tile">E</span>
+                </div>
+                <p class="label">Your answer</p>
+                <div class="answer">
+                  <span class="slot is-filled">C</span><span class="slot is-filled">A</span><span class="slot is-empty"></span><span class="slot is-empty"></span><span class="slot is-empty"></span><span class="slot is-empty"></span>
+                </div>
+              </div>
+              <div class="scrim" aria-hidden="true"></div>
+
+              <div class="modal" role="dialog" aria-modal="true" aria-labelledby="help-title">
+                <div class="modal__head">
+                  <h3 id="help-title">Keys</h3>
+                  <button class="btn btn--icon" type="button" aria-label="Close help">×</button>
+                </div>
+                <table class="keys">
+                  <caption class="sr-only">Keyboard controls</caption>
+                  <tbody>
+                    <tr><th scope="row"><kbd>←</kbd> <kbd>→</kbd></th><td>Move cursor</td></tr>
+                    <tr><th scope="row"><kbd>a</kbd>–<kbd>z</kbd></th><td>Type into cursor slot (pool letters only)</td></tr>
+                    <tr><th scope="row"><kbd>⌫</kbd></th><td>Clear slot, or step left and clear</td></tr>
+                    <tr><th scope="row"><kbd>Tab</kbd></th><td>Next clue</td></tr>
+                    <tr><th scope="row"><kbd>Ctrl+R</kbd></th><td>Reset round (same word, reshuffled)</td></tr>
+                    <tr><th scope="row"><kbd>?</kbd></th><td>Toggle this help</td></tr>
+                    <tr><th scope="row"><kbd>Esc</kbd></th><td>Quit</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </article>
+          <p class="caption"><strong>Fig. 2d</strong> · Help overlay: modal over the dimmed board, key table from the controls spec.</p>
+        </section>
+
+        <!-- Confirm abandon -->
+        <section class="tabpanel" role="tabpanel" id="panel-confirm" aria-labelledby="tab-confirm" hidden>
+          <article class="window window--mini" aria-label="Confirm abandon dialog">
+            <div class="titlebar">
+              <div class="lights" aria-hidden="true"><span class="light light--close"></span><span class="light light--min"></span><span class="light light--max"></span></div>
+              <p class="titlebar__title">Anagram — Confirm</p>
+            </div>
+            <div class="scene">
+              <div class="board" aria-hidden="true">
+                <p class="label">Scrambled</p>
+                <div class="pool">
+                  <span class="tile">R</span><span class="tile">E</span><span class="tile">T</span><span class="tile">E</span>
+                </div>
+                <p class="label">Your answer</p>
+                <div class="answer">
+                  <span class="slot is-filled">C</span><span class="slot is-filled">A</span><span class="slot is-empty"></span><span class="slot is-empty"></span><span class="slot is-empty"></span><span class="slot is-empty"></span>
+                </div>
+              </div>
+              <div class="scrim" aria-hidden="true"></div>
+
+              <div class="modal modal--compact" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-desc">
+                <div class="modal__head">
+                  <h3 id="confirm-title">Confirm abandon?</h3>
+                </div>
+                <p id="confirm-desc" class="muted">This puzzle is not solved yet. A new puzzle will replace it and the progress will be lost.</p>
+                <div class="actions">
+                  <button class="btn" type="button">Cancel</button>
+                  <button class="btn btn--danger" type="button">Abandon</button>
+                </div>
+              </div>
+            </div>
+          </article>
+          <p class="caption"><strong>Fig. 2e</strong> · Confirm abandon: shown for New puzzle, Custom word, or slider move on an unfinished puzzle. Not shown after a win.</p>
+        </section>
+      </section>
+    </main>
+
+  </div>
+
+  <script>
+    (function () {
+      /* ---- Tabs: roving tabindex, arrow / Home / End keys ---- */
+      var tabs = Array.prototype.slice.call(document.querySelectorAll('[role="tab"]'));
+      var panels = tabs.map(function (t) {
+        return document.getElementById(t.getAttribute('aria-controls'));
+      });
+
+      function selectTab(index, moveFocus) {
+        tabs.forEach(function (t, i) {
+          var on = i === index;
+          t.setAttribute('aria-selected', on ? 'true' : 'false');
+          t.tabIndex = on ? 0 : -1;
+          panels[i].hidden = !on;
+        });
+        if (moveFocus) tabs[index].focus();
+      }
+
+      tabs.forEach(function (t, i) {
+        t.addEventListener('click', function () { selectTab(i, false); });
+        t.addEventListener('keydown', function (e) {
+          var next = null;
+          if (e.key === 'ArrowRight') next = (i + 1) % tabs.length;
+          else if (e.key === 'ArrowLeft') next = (i - 1 + tabs.length) % tabs.length;
+          else if (e.key === 'Home') next = 0;
+          else if (e.key === 'End') next = tabs.length - 1;
+          if (next !== null) {
+            e.preventDefault();
+            selectTab(next, true);
+          }
+        });
+      });
+    })();
+  </script>
+</body>
+</html>
