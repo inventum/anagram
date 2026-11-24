@@ -1,0 +1,16 @@
+[package]
+name = "anagram"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.75"
+description = "Terminal anagram puzzle game"
+
+[dependencies]
+ratatui = { version = "0.29", default-features = false, features = ["crossterm"] }
+crossterm = "0.28"
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
+rand = { version = "0.8", features = ["std_rng"] }
+anyhow = "1"

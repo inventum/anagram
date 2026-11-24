@@ -1,0 +1,11 @@
+{
+  "source_name": "wordnet",
+  "wn_dir": "/tmp/wn/dict",
+  "mode": "wordnet-full",
+  "min_len": 4,
+  "max_len": 10,
+  "entry_count": 86587,
+  "built_at": "2026-11-16T17:18:36Z",
+  "output_path": "data/words.json",
+  "sha256": "1cffdab9ec09148c826bb7c1786d2cb9750e03c7a02209bef26cafc5a3560a40"
+}

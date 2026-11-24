@@ -1,0 +1,31 @@
+{
+  "format_version": 1,
+  "source": {
+    "path": "data/fixtures/words_mini.json",
+    "sha256": "66f58f9b374f3ddcbdd8dd9a666850d5e86025b7fea9161de78e590e57afee4f"
+  },
+  "locale": "en-US",
+  "min_size": 4,
+  "max_size": 10,
+  "built_at": "2024-09-26T16:45:15Z",
+  "entry_count": 3,
+  "bucket_count": 2,
+  "buckets": {
+    "adiin": [
+      {
+        "word": "india",
+        "definition": "a republic in the Asian subcontinent in southern Asia"
+      }
+    ],
+    "eilnst": [
+      {
+        "word": "listen",
+        "definition": "hear with intention"
+      },
+      {
+        "word": "silent",
+        "definition": "marked by absence of sound"
+      }
+    ]
+  }
+}
