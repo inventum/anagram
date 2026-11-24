@@ -405,9 +405,8 @@ mod tests {
         );
     }
 
-    /// Needs WP-2 (`dto::ui_state`, `ActionDto::into_actions`); currently `todo!()`.
+    /// Exercises `dto::ui_state` and `ActionDto::into_actions` through `dispatch`.
     #[test]
-    #[ignore = "WP-2 dependency: dto::ui_state and into_actions are todo!()"]
     fn wp2_dependent_dispatch_returns_snapshot() {
         let engine = test_engine();
         let mut session = session_with(&AppConfig::default(), 18);
@@ -418,9 +417,8 @@ mod tests {
         assert!(snap.round.is_some());
     }
 
-    /// Needs WP-2 (`into_actions` pair mapping) and the snapshot; currently `todo!()`.
+    /// Exercises `into_actions` pair mapping and the snapshot through `dispatch`.
     #[test]
-    #[ignore = "WP-2 dependency: dto::ui_state and into_actions are todo!()"]
     fn wp2_dependent_dispatch_cancel_custom_pair() {
         let engine = test_engine();
         let mut session = session_with(&AppConfig::default(), 19);
@@ -432,9 +430,8 @@ mod tests {
         assert!(snap.round.is_some());
     }
 
-    /// Needs WP-5 (`theme::theme_dto`); currently `todo!()`.
+    /// Exercises `theme::theme_dto` via `Engine::load`.
     #[test]
-    #[ignore = "WP-5 dependency: theme::theme_dto is todo!()"]
     fn wp5_dependent_engine_load_builds_theme() {
         let engine = Engine::load(&AppConfig::default()).expect("engine");
         assert_eq!(engine.theme.pool, "#00ffff");

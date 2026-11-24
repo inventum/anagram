@@ -25,9 +25,9 @@ export interface RoundDto {
   answer: (string | null)[];
   cursor: number;
   /** Present only while highlightCorrectPositions is on. */
-  correct: boolean[] | null;
+  correct?: boolean[];
   /** Present only when phase is 'won'. */
-  solution: string | null;
+  solution?: string;
 }
 
 export interface PlacedDto {
@@ -86,8 +86,8 @@ export interface UiState {
   clues: ClueDto;
   activeClue: string | null;
   status: StatusDto;
-  round: RoundDto | null;
-  workbench: WorkbenchDto | null;
+  round?: RoundDto;
+  workbench?: WorkbenchDto;
   custom: CustomDto;
   theme: ThemeDto;
 }

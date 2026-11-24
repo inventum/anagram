@@ -17,8 +17,6 @@ const playingRound: RoundDto = {
   pool: ['r', 'e', 't', 'c', 'a'],
   answer: [null, null, null, null, null],
   cursor: 0,
-  correct: null,
-  solution: null,
 };
 
 const playing: UiState = {
@@ -31,7 +29,6 @@ const playing: UiState = {
   activeClue: null,
   status: { kind: 'none', message: null },
   round: playingRound,
-  workbench: null,
   custom: noCustom,
   theme,
 };
@@ -75,7 +72,6 @@ export const FIXTURES = {
     phase: 'customWordInput',
     clues: { used: 0, budget: 0 },
     status: { kind: 'info', message: 'Type the scrambled letters, then press Enter.' },
-    round: null,
     custom: { input: 'cra', choices: [], pick: 0 },
   },
 
@@ -84,7 +80,6 @@ export const FIXTURES = {
     phase: 'customWordPick',
     clues: { used: 0, budget: 0 },
     status: { kind: 'info', message: '3 possible words. Pick one and press Enter.' },
-    round: null,
     custom: {
       input: 'crate',
       choices: [

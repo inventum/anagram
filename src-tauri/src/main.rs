@@ -38,18 +38,12 @@ fn main() {
 
 #[tauri::command]
 fn dispatch(state: tauri::State<'_, AppState>, action: ActionDto) -> Result<UiState, String> {
-    let mut session = state
-        .session
-        .lock()
-        .map_err(|_| "internal error".to_string())?;
+    let mut session = state.lock_session()?;
     session.dispatch(&state.engine, action)
 }
 
 #[tauri::command]
 fn get_state(state: tauri::State<'_, AppState>) -> Result<UiState, String> {
-    let mut session = state
-        .session
-        .lock()
-        .map_err(|_| "internal error".to_string())?;
+    let mut session = state.lock_session()?;
     Ok(session.snapshot(&state.engine))
 }
