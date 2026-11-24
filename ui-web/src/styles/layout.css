@@ -1,0 +1,326 @@
+/* Play window layout (WP-7). Colors come from theme.css custom properties;
+   the fallbacks keep the layout usable before theme variables are applied. */
+
+.play-window [hidden] {
+  display: none !important;
+}
+
+.play-window {
+  container: play / inline-size;
+  box-sizing: border-box;
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  min-height: 100vh;
+  padding: 16px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.label {
+  margin: 0;
+  color: var(--muted, #888);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Toolbar: spans the play panel, above the board. */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border, #444);
+}
+
+.length {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+.length input[type="range"] {
+  flex: 1;
+  min-width: 120px;
+  accent-color: var(--pool, currentColor);
+}
+
+.length output {
+  min-width: 2ch;
+  font-size: 16px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.toolbar__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-left: auto;
+}
+
+/* Header: title left, clue counter and buttons right. */
+.app-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.puzzle-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+
+.puzzle-title span {
+  color: var(--muted, #888);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.app-header__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.counter {
+  margin: 0;
+  padding: 0 8px;
+  color: var(--muted, #888);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 4px 12px;
+  border: 1px solid var(--border, #444);
+  border-radius: 8px;
+  background: var(--surface-2, transparent);
+  color: var(--text, inherit);
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.btn--icon {
+  width: 32px;
+  padding: 0;
+  justify-content: center;
+  font-weight: 700;
+}
+
+/* Play area: board left, clue and workbench right at >= 880px content width. */
+.play {
+  display: grid;
+  gap: 24px;
+  align-items: start;
+  min-width: 0;
+}
+
+@container play (min-width: 880px) {
+  .play {
+    grid-template-columns: minmax(0, 1fr) 300px;
+  }
+}
+
+.board {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+  align-content: start;
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+  padding: 24px;
+  border: 1px solid var(--border, #444);
+  border-radius: var(--r-panel, 12px);
+  background: var(--bg, transparent);
+}
+
+.round {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+  max-width: 100%;
+}
+
+.round > .label:not(:first-child) {
+  margin-top: 8px;
+}
+
+.pool,
+.answer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-width: 100%;
+}
+
+.tile,
+.slot {
+  position: relative;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--r-tile, 8px);
+  font-size: 24px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.tile {
+  border: 1px solid var(--border, #444);
+  background: var(--surface-2, transparent);
+  color: var(--pool, currentColor);
+}
+
+.slot {
+  border: 2px dashed var(--empty, #666);
+  color: var(--filled, currentColor);
+}
+
+.slot.is-filled {
+  border: 1px solid var(--border, #444);
+  background: var(--surface-2, transparent);
+}
+
+.slot[aria-current="true"] {
+  outline: 2px solid var(--pool, currentColor);
+  outline-offset: 3px;
+}
+
+.answer.is-wrong .slot {
+  border: 2px solid var(--wrong, #c0392b);
+  color: var(--wrong, #c0392b);
+}
+
+.slot.is-correct {
+  border: 2px solid var(--correct, #27ae60);
+  color: var(--correct, #27ae60);
+  background: color-mix(in srgb, var(--correct, #27ae60) 14%, transparent);
+}
+
+.slot .mark {
+  position: absolute;
+  top: 3px;
+  right: 5px;
+  font-size: 10px;
+  line-height: 1;
+}
+
+.solution {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+}
+
+.solution strong {
+  font-size: 18px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
+  min-height: 24px;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.status--error,
+.status--wrongAnswer {
+  color: var(--wrong, #c0392b);
+}
+
+/* Side column: clue panel above the workbench container. */
+.side {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+  min-width: 0;
+}
+
+.panel {
+  box-sizing: border-box;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--border, #444);
+  border-radius: var(--r-panel, 12px);
+}
+
+.clue__text {
+  margin: 8px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.clue__text.is-empty {
+  color: var(--muted, #888);
+}
+
+.workbench-slot {
+  min-width: 0;
+}
+
+/* Footer key hints. */
+.keyhints {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  color: var(--muted, #888);
+  font-size: 12px;
+}
+
+.keyhints kbd {
+  display: inline-block;
+  min-width: 1.6em;
+  margin-right: 2px;
+  padding: 0 4px;
+  border: 1px solid var(--border, #444);
+  border-radius: 4px;
+  font-family: inherit;
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tile,
+  .slot {
+    transition: none;
+  }
+}
