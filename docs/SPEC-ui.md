@@ -12,7 +12,9 @@
 
 **Shared rules:** Puzzle generation, the letter-pool/answer invariant, win check, clue order, and per-round clue budget are defined in [SPEC.md](SPEC.md) §3–§4.4 and [SPEC_LETTER_WORKBENCH.md](SPEC_LETTER_WORKBENCH.md). They are not restated here.
 
-**Controls source of truth:** `src/input.rs`. Where [SPEC.md](SPEC.md) §4.4–§4.5 differs (for example, `r` and `c` are typed letters during play; reset during play is Ctrl+R), `src/input.rs` governs this spec. Exception: the desktop workbench is pointer-first (§3.4, §3.6).
+**Controls source of truth:** `src/input.rs`, except the intentional desktop deviations in §3.6 (Esc, ⌘Q, dropped TUI bindings, pointer-only workbench). Where [SPEC.md](SPEC.md) §4.4–§4.5 differs (for example, `r` and `c` are typed letters during play; reset during play is Ctrl+R), this spec governs.
+
+**Visual reference:** [wireframe-ui.html](wireframe-ui.html). Fig. 1 play window (toolbar, board, workbench); Fig. 2a wrong answer; Fig. 2b custom word pick; Fig. 2c won; Fig. 2d help overlay; Fig. 2e confirm abandon. The wireframe must match this spec. It has no start or size screen.
 
 ---
 
@@ -23,7 +25,7 @@
 | Feature parity with TUI v1 gameplay (§3) | Mobile (iOS / Android) |
 | Reuse the `anagram` core crate with no change to game rules | Web or hosted deployment |
 | One source of game logic: Rust `app::reduce` | Multiplayer / networking |
-| Keyboard controls matching TUI bindings (§3.6) | Changing game rules |
+| Keyboard controls matching TUI bindings where they do not conflict with the toolbar and pointer design (§3.6) | Changing game rules |
 | Responsive layout in a resizable window | Terminal-size behavior (80×24, resize reflow) |
 | Answer never sent to the UI before a win (§5) | Reducing word data size (≈37 MB embedded list accepted as-is) |
 | Config file shared with the TUI (§6) | Accounts, timers, leaderboards |
@@ -35,20 +37,20 @@
 ### 3.1 Puzzle sizes
 
 - Word length N comes from config `min_size` / `max_size` (default 4–10).
-- **No start screen.** The app launches straight into a puzzle at `config.clamp_size(5)` (§4.3). Length selection and new-puzzle start live in the main play window.
+- **No start screen.** Launch starts a random puzzle at `config.clamp_size(5)` (length 5 unless the config bounds exclude it; §4.3). Length selection and new-puzzle start live in the main play window.
 - **Top toolbar** (a row at the top of the play panel, above the board):
   - **Length slider** from `min_size` to `max_size` (default 4–10), showing the current puzzle length as a numeric value.
   - **Custom word** button.
   - **New puzzle** button.
   - The board, pool, answer row, clue, workbench, and footer stay below the toolbar.
 - **Slider semantics.** The slider always reflects the current puzzle's length. A custom word sets the slider to that word's length. Moving the slider starts a new random puzzle of the chosen length. The new puzzle starts on pointer release; if the user cancels the confirmation, the slider returns to the current length.
-- **Custom word** (toolbar button; no keyboard shortcut during Playing, see §3.6): same validation (letters A–Z, length within bounds), same scramble resolution via `SignatureIndex`, and the same pick list when several words match.
+- **Custom word** (toolbar button; no keyboard shortcut during Playing, see §3.6): same validation (letters A–Z, length within bounds), same scramble resolution via `SignatureIndex`, and the same pick list when several words match. The desktop shows the pick-list status text from `SubmitCustomWord`, never the `start_custom_word` text ("pick one in the TUI"), which is CLI-only.
 - **Puzzle replacement rule (confirmation).** Any action that replaces the current puzzle shows a confirmation dialog **when the current puzzle is unfinished** (not yet won):
   - Actions: **New puzzle**, **Custom word** (button press), and **slider move** (on release).
-  - Dialog: "Confirm abandon?" with **Cancel** (no change) and **Abandon** (proceed).
+  - Dialog: "Confirm abandon?" with **Cancel** (no change) and **Abandon** (proceed). Esc = Cancel.
   - **Won puzzle:** no dialog; the action proceeds immediately.
   - The check reads `UiState.phase` (not `won`) in the frontend. This is presentation-only input gating; the reducer is unchanged.
-  - Cancel-after-abandon: because Custom word replaces the board when its input opens, Cancelling or pressing Esc in the Custom word input starts a new random puzzle at the current length (§3.6). The abandoned puzzle is not restored.
+- **Cancel after abandon (core constraint).** `reduce_open_custom_word` leaves the current round in place, and `reduce_cancel_custom_word` returns to `Menu`, which the GUI never shows. The desktop therefore runs `CancelCustomWord` followed by `NewPuzzle` (same size) inside one backend command. Cancel (button, Esc, or `u`) always starts a new random puzzle at the current length. The abandoned puzzle is not restored. While custom input or pick is open, the DTO hides the round (§5.5).
 
 ### 3.2 Gameplay
 
@@ -63,25 +65,25 @@
 
 ### 3.4 Letter workbench and affix hints
 
-- Enabled by config `workbench` (default `true`). Grid size is `workbench_rows` × `workbench_cols` via `AppConfig::workbench_settings()`, which clamps invalid values to 5×5.
-- **Pointer-only.** The workbench has no keyboard focus or grid shortcuts. Hover highlights, click focuses and acts, drag is optional. Pointer table in §3.6.
+- Enabled by config `workbench` (default `true`). Grid size is `workbench_rows` × `workbench_cols` via `AppConfig::workbench_settings()`. A 4×4 or 5×5 grid is used as configured. Any other combination (including mismatched rows and cols) becomes 5×5 (§6).
+- **Pointer-only.** The workbench has no keyboard bindings: no Ctrl+G, no Ctrl+Shift+G, no grid focus mode, and no Space, arrows, letters, or Backspace in the grid. Hover highlights, click acts, and drag is optional. Clicking the workbench sets a visual focus ring only; answer keys always go to the answer row. Pointer table in §3.6.
 - The workbench has **its own letter pool** (`WorkbenchDto.pool`), separate from the round pool (`RoundDto.pool`). Both start as independent shuffles of the solution letters. Moving letters in one never changes the other.
 - The workbench is **cue only**: it never changes answer or win state.
-- **Patterns (cue)** panel: prefix and suffix patterns from `affix_hints::affix_hints(&Round)`, shown inside the workbench panel.
+- **Patterns (cue)** panel: prefix and suffix patterns (`affix_hints::affix_hints(&Round)` → `starts` / `ends`), shown inside the workbench panel.
 - The pattern set depends only on the letter multiset of pool ∪ answer, which is invariant within a round. **The backend computes it once per round and caches it** (§4.3). The TUI recomputes it per frame; the GUI must not.
 
 #### 3.4.1 Workbench layout — pending decision
 
-Two options are under consideration. **Neither is final.**
+Two options are under consideration. **Neither is final.** This is the only place the layouts are described; other sections refer here.
 
 - **Option A — free-form canvas.** An empty canvas. Letters can be placed anywhere (free x, y). No fixed cells.
-- **Option B — sparse 5×5 grid (proposed).** A fixed 5×5 grid, mostly empty. Tiles can move to any empty cell, up, down, or across.
+- **Option B — sparse grid (proposed).** A fixed grid, mostly empty: 5×5 by default, or 4×4 when config sets it (§3.4, §6). Tiles can move to any empty cell, up, down, or across.
   - Cells keep identity: each cell has a fixed index and holds at most one tile. No overlap.
   - Placing a tile on an occupied cell swaps, as in the TUI.
-  - Config may set 4×4 (§6). The proposal assumes the 5×5 default.
+  - B uses the configured size. The wireframe shows the 5×5 case.
   - **Clear** button returns all tiles (cells and hand) to the workbench pool and reshuffles it.
 
-**Recommendation:** B — *proposed, pending decision*.
+**Recommendation:** B — *proposed, pending decision* (§11 Q5).
 
 Trade-offs:
 
@@ -96,14 +98,14 @@ Four config keys set the colors of empty answer slots, filled answer letters, th
 
 ### 3.6 Keyboard controls
 
-Authoritative source: `src/input.rs`. Keys are case-insensitive for letters.
+Authoritative source: `src/input.rs`, with the desktop deviations below. Keys are case-insensitive for letters.
 
 **Global**
 
 | Key | Action | Where |
 |-----|--------|-------|
-| Esc | Quit (close window) | All phases |
-| ⌘Q / Ctrl+C | Quit (close window) | All phases |
+| Esc | Close the open overlay, dialog, or custom-word input: Help → close; Custom word input or pick → Cancel (§3.1); Confirm dialog → Cancel. With nothing open, no-op. Esc never quits. | All phases |
+| ⌘Q | Quit (close window). macOS only (§8). | All phases |
 
 **Playing / Help — answer focus**
 
@@ -121,8 +123,8 @@ Authoritative source: `src/input.rs`. Keys are case-insensitive for letters.
 | Pointer action | Effect |
 |----------------|--------|
 | Hover tile or cell | Hover highlight (frontend only; no dispatch) |
-| Click workbench panel | Focus workbench (`focus = grid`; focus ring) |
-| Click answer row | Focus answer (`focus = answer`) |
+| Click workbench panel | Visual focus ring on the workbench (`focus = grid`); answer keys unaffected |
+| Click answer row | Visual focus ring on the answer (`focus = answer`) |
 | Click tile in workbench pool | Pick it up (`held`); removed from workbench pool |
 | Click empty cell while holding | Place held tile (Layout B; Layout A: at click point) |
 | Click filled cell, hand empty | Pick up that tile |
@@ -146,7 +148,7 @@ Authoritative source: `src/input.rs`. Keys are case-insensitive for letters.
 | `a`–`z` | Type (capped at max length) |
 | Enter | Submit |
 | Backspace | Delete last letter |
-| Esc | Cancel, return to the play window with a new random puzzle at the current length (§3.1) |
+| Esc | Cancel: new random puzzle at the current length (§3.1) |
 
 **Custom word pick**
 
@@ -154,19 +156,25 @@ Authoritative source: `src/input.rs`. Keys are case-insensitive for letters.
 |-----|--------|
 | `↑` / `↓` or `k` / `j` | Move highlight |
 | Enter | Start puzzle with highlighted word |
-| `u` | Cancel, return to the play window with a new random puzzle at the current length (§3.1) |
-| Esc | Quit (TUI parity; see §11) |
+| Click a row | Highlight that row (`customPickSelect`); does not start the puzzle |
+| `u` | Cancel: new random puzzle at the current length (§3.1) |
+| Esc | Cancel, same as `u` |
 
-**Confirm abandon** (dialog; shown only per the §3.1 rule): pointer only, **Cancel** and **Abandon** buttons. Keyboard binding is open (§11).
+**Confirm abandon** (dialog; shown only per the §3.1 rule): **Cancel** and **Abandon** buttons. Esc = Cancel. Abandon has no key binding (§11 Q8).
+
+**Intentionally dropped TUI bindings** (the desktop app binds none of these):
+
+- `Esc` as quit (all phases, including custom pick) and `Ctrl+C` as quit. Quit is ⌘Q only.
+- `s` (Size screen), digits `4`–`9` and `0`, and `s` in Won. Length is set by the slider only.
+- `c` as the clue key. Tab is the only clue key.
+- `Ctrl+G`, `Ctrl+Shift+G`, Space, and arrows, letters, or Backspace in the workbench grid (grid focus mode). The workbench is pointer-only.
+- `[g]` (workbench toggle, [SPEC.md](SPEC.md) §4.2). No desktop binding.
 
 **Parity notes**
 
-- `c` maps to "next clue" in `input.rs`, but the reducer ignores clue requests outside Playing / Help. Tab is the only effective clue key, in both TUI and GUI.
-- During Playing / Help, `r` and `c` are letters. Reset is Ctrl+R.
-- Workbench keyboard bindings exist only in the TUI (`src/input.rs`). The desktop workbench is pointer-first and binds none of them.
-- **Intentional deviation (Size screen removed):** the GUI omits the Size-screen keys (`s`, and digits `4`–`9`, `0` that start a puzzle of a size). Length is set by the toolbar slider (§3.1). Keyboard length selection is open (§11).
-- During Playing, `n` and `i` are letters, so New puzzle, Custom word, and the slider have no keyboard shortcut there. Won keeps `n`, `i`, and `r`.
-- The GUI keeps Esc / ⌘Q as quit in every focus state (intentional deviation).
+- During Playing / Help, `n`, `i`, `s`, `r`, `c`, and `q` are letters. New puzzle, Custom word, length, and reset therefore have no bare-letter shortcut there. Reset is Ctrl+R; New puzzle, Custom word, and the slider are toolbar-only.
+- Tab is the only effective clue key. `c` reaches `RequestClue` only in Won, where the reducer ignores it.
+- Won keeps `n`, `i`, `r`, and `?`. Ctrl+R in Won also resets, as in the TUI, because the TUI's navigation handler ignores modifiers.
 - The GUI ignores unlisted Ctrl/Meta chords. The TUI types the letter for Ctrl+letter in custom input (intentional deviation).
 
 ---
@@ -193,7 +201,7 @@ The frontend directory is **`ui-web/`**.
 
 ### 4.2 Cargo workspace
 
-- Root `Cargo.toml` adds `[workspace] members = [".", "src-tauri"]` and `default-members = ["."]`. Plain `cargo test` and `make test` therefore keep covering only the TUI crate; use `--workspace` for the GUI crate.
+- Root `Cargo.toml` adds `[workspace] members = [".", "src-tauri"]` and `default-members = ["."]`. Plain `cargo test` and `make test` therefore keep covering only the TUI crate. Use `cargo test -p anagram-desktop` for the GUI crate (or `cargo test --workspace` for both).
 - `src-tauri` depends on `anagram = { path = ".." }`. There is one `Cargo.lock`, at the root.
 - The root crate keeps `rust-version = "1.75"`. Tauri v2 needs a newer toolchain. `src-tauri` declares its own `rust-version`, matching the pinned Tauri release (verify at implementation time).
 
@@ -203,7 +211,7 @@ The frontend directory is **`ui-web/`**.
 
 1. `AppConfig::load(None)`. On error, show a native error dialog and exit (matches TUI, which fails on bad config).
 2. `Dictionary::from_embedded()` and `SignatureIndex::from_embedded()`. Both are read-only, so they are managed as `Arc` with **no lock**. Loaded once.
-3. Initial state, as in `lib.rs::run_play`: `GameState::with_bounds(config.clamp_size(5), config.min_size, config.max_size)` with `workbench_settings = config.workbench_settings()`. No start screen: immediately start a random puzzle at `config.clamp_size(5)`.
+3. Initial state, as in `lib.rs::run_play`: `GameState::with_bounds(config.clamp_size(5), config.min_size, config.max_size)` with `workbench_settings = config.workbench_settings()`. Unlike the TUI, setup then runs `NewPuzzle` so the first `UiState` is in Playing. No Menu phase is exposed.
 4. `StdRng::from_entropy()`.
 5. Managed as `Mutex<Session>`, where `Session { state: GameState, rng: StdRng, affix_cache: Option<(String, AffixHints)> }`. The cache is keyed by the internal solution string, which is never serialized.
 
@@ -211,7 +219,7 @@ The frontend directory is **`ui-web/`**.
 
 | Command | Behavior |
 |---------|----------|
-| `dispatch(action: ActionDto) -> UiState` | Sole mutation entry point. Locks the session, converts to `app::Action`, calls `app::reduce`, rebuilds `UiState`, returns it. `Quit` is never sent to `reduce`; the shell closes the window. |
+| `dispatch(action: ActionDto) -> UiState` | Sole mutation entry point. Locks the session, converts to `app::Action`, calls `app::reduce`, rebuilds `UiState`, returns it. `Quit` is never sent to `reduce`; the shell closes the window. `cancelCustomWord` runs `CancelCustomWord` then `NewPuzzle` under the same lock (§3.1), so Menu is never returned. |
 | `get_state() -> UiState` | Read-only. Used once for the initial render. |
 
 **Concurrency:** all dispatches are serialized by the mutex. The frontend sends keys in order and awaits each response.
@@ -239,8 +247,8 @@ The frontend directory is **`ui-web/`**.
    - `GameState.current_word` (contains `word`, `definition`, `noun_senses`, clue list) is never sent. Only the rendered active-clue string and the clue budget are sent.
    - `GameState.anagram_alternates` is never sent. Alternate words are valid answers.
    - Per-slot correctness flags are sent only while `highlight_correct_positions` is on. Backend computes them with `Round::slot_is_correct`.
-3. Candidate words in `CustomWordPick` are sent (§11, decision 5).
-4. Affix patterns are sent during play (§11, decision 6).
+3. Candidate words in `CustomWordPick` are sent (§11 Q3).
+4. Affix patterns are sent during play (§11 Q4).
 
 ### 5.2 Why DTO mapping, not `Serialize` on core types
 
@@ -255,10 +263,10 @@ The frontend directory is **`ui-web/`**.
 #[serde(rename_all = "camelCase")]
 pub struct UiState {
     pub phase: PhaseDto,          // customWordInput | customWordPick | playing | help | won (no menu / sizeSelect in GUI)
-    pub help_open: bool,
-    pub size: u8,
-    pub min_len: u8,
-    pub max_len: u8,
+    pub help_open: bool,          // overlay visible; `?` or Esc closes it (§3.6)
+    pub length: u8,               // current puzzle length (slider value)
+    pub min_size: u8,             // config min_size (slider minimum)
+    pub max_size: u8,             // config max_size (slider maximum)
     pub clues: ClueDto,           // { used, budget }
     pub active_clue: Option<String>,
     pub status: StatusDto,        // { kind: none | error | info | wrongAnswer, message }
@@ -286,18 +294,47 @@ pub struct WorkbenchDto {
     pub pool: Vec<char>,              // workbench's own pool; not round.pool
     pub cursor: usize,                // last clicked cell index; hover is frontend-only
     pub held: Option<char>,           // tile picked up by click
-    pub focus: FocusDto,              // answer | grid; set by click
-    pub affixes: AffixDto,            // { starts, ends }, cached per round
+    pub focus: FocusDto,              // answer | grid; visual ring only (§3.4)
+    pub affixes: AffixDto,            // { starts, ends } = Prefix / Suffix, cached per round
 }
 ```
+
+**Wireframe mapping** (names must match the sketch above):
+
+| Wireframe element | Field |
+|-------------------|-------|
+| Toolbar slider and value (Fig. 1) | `length`, `min_size`, `max_size` |
+| Title "ANAGRAM · 6 letters" | `length` |
+| Clue counter: "Clues 1/3" (Fig. 1), "Clues used 2 of 3" (Fig. 2c) | `clues.used`, `clues.budget` |
+| Clue text | `active_clue` |
+| Scrambled pool | `round.pool` |
+| Answer slots and cursor | `round.answer`, `round.cursor` |
+| Status line | `status.kind`, `status.message` |
+| Wrong-answer slots (Fig. 2a) | `round.answer` with `status.kind == wrongAnswer` |
+| Workbench pool | `workbench.pool` |
+| Workbench grid cells | `workbench.cells`, `workbench.rows`, `workbench.cols` |
+| Held tile | `workbench.held` |
+| Prefix / Suffix (Patterns) | `workbench.affixes.starts` / `.ends` |
+| Custom word scramble field (Fig. 2b) | `custom.input` |
+| Pick rows and highlight (Fig. 2b) | `custom.choices`, `custom.pick` |
+| Solved slots and solution (Fig. 2c) | `round.answer` (all green when `phase == won`), `round.solution` |
+| Help overlay (Fig. 2d) | `help_open` |
+| Confirm dialog (Fig. 2e) | none; frontend-only state |
 
 ### 5.4 `ActionDto`
 
 - Serde tagged enum: `#[serde(tag = "type", rename_all = "camelCase")]`.
-- One variant per `app::Action` variant, except `Quit` (handled by the shell).
+- Keyboard and toolbar variants map 1:1 to `app::Action`:
+  - `toggleHelp`, `newPuzzle`, `resetRound`, `requestClue`, `backspace`, `cursorLeft`, `cursorRight`, `typeLetter { ch }`
+  - `selectSize { n }` (slider release)
+  - `openCustomWord`, `customWordType { ch }`, `customWordBackspace`, `submitCustomWord`
+  - `cancelCustomWord` (the backend also runs `newPuzzle`, §3.1)
+  - `customPickDelta { delta }`, `customPickSelect { idx }` (click row; no `app::Action` equivalent yet), `confirmCustomPick`
+- Workbench pointer variants (no `app::Action` equivalent yet): `workbenchClickCell { idx }`, `workbenchClickPool { idx }`, `workbenchSetFocus { focus }`, `workbenchClear` (maps to `WorkbenchResetGrid`). Layout A replaces `idx` with `{ x, y }` (§3.4.1).
+- Not in `ActionDto`: `quit` (shell); `openSizeSelect` / `cancelSizeSelect` (no size screen); `toggleWorkbenchFocus`, `workbenchMove`, `workbenchPickPlace`, `workbenchClearCell`, `workbenchTypeLetter` (TUI keyboard-only bindings, §3.6).
+- **Confirm flow:** the dialog is frontend-only. Abandon dispatches the pending action (`newPuzzle`, `openCustomWord`, or `selectSize { n }`). Cancel and Esc dispatch nothing; the slider returns to `UiState.length`.
 - Example: `{ "type": "typeLetter", "ch": "a" }`.
 - Conversion `TryFrom<ActionDto> for app::Action` rejects non-ASCII-alphabetic characters in letter variants. `reduce` also guards.
-- Workbench pointer actions (proposed): `workbenchClickCell { idx }`, `workbenchClickPool { idx }`, `workbenchSetFocus { focus }`, and `workbenchClear` (maps to `WorkbenchResetGrid`). The first three have no `app::Action` equivalent yet. Layout A replaces `idx` with `{ x, y }`.
 
 ### 5.5 Visibility by phase
 
@@ -328,8 +365,8 @@ pub struct WorkbenchDto {
 | `pool_color` | string | `light_cyan` | Scrambled pool letters |
 | `correct_position_color` | string | `light_green` | Correct-position highlight |
 | `workbench` | bool | `true` | Show workbench |
-| `workbench_rows` | u8 | 5 | Grid rows (clamped with `workbench_cols`) |
-| `workbench_cols` | u8 | 5 | Grid columns |
+| `workbench_rows` | u8 | 5 | Grid rows: 4 or 5. If rows ≠ cols, or either is not 4 or 5, both become 5 (`workbench_settings()`) |
+| `workbench_cols` | u8 | 5 | Grid columns (see `workbench_rows`) |
 
 **Color translation (backend, `src-tauri/src/theme.rs`):**
 
@@ -347,10 +384,10 @@ Defaults in the xterm palette: `light_magenta` → `#ff00ff`, `light_yellow` →
 - **Resizable window.** `tauri.conf.json` declares `minWidth` / `minHeight` (proposed: **640 × 480**) and a default size (proposed: **960 × 640**). Tune both during manual testing.
 - **Responsive layout (CSS):**
   - The top toolbar (§3.1: length slider, Custom word, New puzzle) spans the play panel.
-  - Board (header, pool, answer row) is centered.
-  - Workbench panel sits beside the board when the window is wide enough and stacks below it otherwise.
+  - Board (pool, answer row, status) sits in the left play column.
+  - At content width ≥ 880 px, the clue and workbench panels sit in a right column beside the board. Below that width they stack below it.
   - Pool letters wrap. Clue text wraps.
-  - Help is a modal overlay with the same content as the TUI help overlay.
+  - Help is a modal overlay that lists the desktop key table (§3.6). Close it with `?`, Esc, or ×.
 - **Status text:** errors and wrong-answer feedback use text, not color alone (matching the TUI accessibility rule).
 
 ---
@@ -358,6 +395,7 @@ Defaults in the xterm palette: `light_magenta` → `#ff00ff`, `light_yellow` →
 ## 8. Platforms
 
 - **macOS first.** This is the only platform with manual test coverage in v1.
+- **Quit:** ⌘Q on macOS. Other platforms use their native quit or close convention; not tested in v1.
 - Linux and Windows are not blocked by design. Avoid platform-specific APIs; use `std::env::home_dir` through the existing config path. They are not tested in v1.
 
 ---
@@ -371,7 +409,7 @@ Defaults in the xterm palette: `light_magenta` → `#ff00ff`, `light_yellow` →
 | Dev run (window + Vite HMR) | `cargo tauri dev` (from repo root) |
 | Release bundle (macOS `.app`) | `cargo tauri build` |
 | Frontend only | `npm --prefix ui-web run dev` / `npm --prefix ui-web run build` |
-| TUI tests (unchanged) | `cargo test` (root, via `default-members`) |
+| TUI tests (unchanged) | `cargo test` (root, via `default-members`; also `make test`) |
 | GUI Rust tests | `cargo test -p anagram-desktop` |
 
 `cargo tauri dev` and `build` invoke the `ui-web` npm scripts through `tauri.conf.json` (`beforeDevCommand` / `beforeBuildCommand`).
@@ -386,15 +424,15 @@ Defaults in the xterm palette: `light_magenta` → `#ff00ff`, `light_yellow` →
 
 | Area | Tests |
 |------|-------|
-| DTO hiding | For Custom input, Playing, Help: serialized `UiState` contains no `solution` key and no string equal to the solution |
+| DTO hiding | For Custom input, Playing, Help: serialized `UiState` contains no `solution` key and no string equal to the solution. Custom pick is excluded: candidates include the solution by design (§5.5). |
 | DTO win exposure | In Won, `round.solution` equals the solution |
 | Correctness flags | `correct` is `None` unless highlight is on; when on, flags match `slot_is_correct` |
-| Alternates hidden | Round with alternates: no alternate word appears in any serialized state |
-| ActionDto mapping | Every `ActionDto` variant maps to the matching `app::Action`; non-letter `ch` is rejected |
+| Alternates hidden | Round with alternates: no alternate word appears in any serialized state outside `custom.choices` during Pick |
+| ActionDto mapping | Every keyboard and toolbar `ActionDto` variant maps to its `app::Action`; `cancelCustomWord` yields `CancelCustomWord` then `NewPuzzle`; non-letter `ch` is rejected |
 | Reducer integration | Fixed-seed sequence of `dispatch` calls produces the same state as calling `app::reduce` directly |
 | Affix cache | Same round → cached result reused; new round → recomputed |
 | Theme mapping | All 16 names map to expected CSS; unknown name → magenta |
-| Config | Missing file → defaults; malformed file → load error propagates |
+| Config | Missing file → defaults; malformed file → load error propagates; invalid workbench dims → 5×5 |
 
 Core crate tests stay as they are (`cargo test` at root).
 
@@ -404,35 +442,36 @@ Optional for v1. If added, cover the key → `ActionDto` table in §3.6 (pure fu
 
 ### 10.3 Manual parity checklist (macOS)
 
-- [ ] Launch: a puzzle starts immediately at the default length; no start screen
+- [ ] Launch: a random puzzle starts immediately at the default length; no start screen
 - [ ] Toolbar: slider shows current length; release starts a puzzle of that length; custom word sets slider to its length
 - [ ] Confirm abandon: New puzzle, Custom word, and slider on an unfinished puzzle show the dialog; Cancel changes nothing; no dialog after a win
+- [ ] Esc: closes Help, custom input, and custom pick (as Cancel); Cancel in the confirm dialog; no-op in Playing and Won; never quits; ⌘Q quits
+- [ ] Custom word Cancel (button, Esc, or `u`) starts a random puzzle at the current length; the Menu is never shown
 - [ ] Playing: letters fill cursor slot; Backspace returns letter to pool; arrows move cursor
 - [ ] Playing: pool shrinks on type and grows on delete; invariant holds
 - [ ] Tab shows clues in order; header counter matches budget; clue budget cycles
 - [ ] Ctrl+R resets same word with reshuffled pool
 - [ ] Correct full answer → Won banner; wrong full answer → text feedback; backspace recovers
 - [ ] Won: `n`, `i`, `r` behave per §3.6
-- [ ] Custom word: valid word starts puzzle; invalid shows error; multiple matches show pick list; `u` and Esc behave per §3.6
-- [ ] Workbench (pointer): hover highlight; click panel focuses; click pool tile then empty cell places; click filled cell swaps while holding; Clear returns all tiles to pool; Patterns panel visible
+- [ ] Custom word: valid word starts puzzle; invalid shows error; multiple matches show pick list; `u` and Esc cancel per §3.6
+- [ ] Workbench (pointer): hover highlight; click pool tile then empty cell places; click filled cell swaps while holding; Clear returns all tiles to pool; Patterns panel visible; no keyboard response in the workbench
 - [ ] Colors match config; changing a color key and restarting updates the UI
 - [ ] Malformed config shows error dialog; missing config uses defaults
 - [ ] Window resize: layout stays usable at minimum size; no clipped controls
-- [ ] DevTools → Network/IPC inspection: no response contains the solution before Won
+- [ ] DevTools → Network/IPC inspection: before Won, no response contains the `solution` field or the solution string, except `custom.choices` during Pick
 - [ ] First round with Patterns panel: acceptable latency (affix lexicon scan)
 
 ---
 
 ## 11. Open Questions
 
+Each question states the default in use. Resolved items were removed (see §4.1 for the separate crate, §3.6 for Esc and workbench keys, §7 for window size).
+
 1. **Expose `solve` in the GUI?** Default: **no**. `solve` is a CLI tool that prints TSV to stdout.
 2. **Add a `tui` Cargo feature to gate `ratatui` / `crossterm`?** Default: **yes, recommended**, but optional for v1. Gating would touch `ui`, `input`, `terminal`, and `lib::run`. Without it, `src-tauri` compiles the terminal stack transitively.
-3. **Separate binary or second target?** Default: **separate `src-tauri` crate** (`anagram-desktop`). The `anagram` binary is untouched.
-4. **Esc semantics.** The TUI quits from every non-play screen and quits from Custom pick. Default: **TUI parity**. Alternative: Esc goes back (Pick → Input).
-5. **Candidate words in `CustomWordPick`.** Default: **send** them. The user typed the scramble, and the TUI shows the matches. This is not a round answer.
-6. **Affix patterns during play.** They are derived from the lexicon and may reveal a prefix or suffix of the answer. Default: **send** (TUI parity; cue by design). Alternative: hide until Won.
-7. **Final window minimum size.** Default: proposed 640 × 480, tune during manual testing (§7).
-8. **Workbench layout.** Option A (free-form canvas) or option B (sparse 5×5 grid). Default: **B, proposed, pending decision** (§3.4.1).
-9. **Workbench focus and answer keys.** Default (proposed): focus is a visual ring set by click and does not block answer keys. Alternative: a workbench click moves all key input to the grid.
-10. **Solved-puzzle confirmation.** Should New puzzle, Custom word, and slider moves also confirm when the current puzzle is already won? Default: **no** (§3.1).
-11. **Keyboard length and new-puzzle shortcuts.** The Size-screen keys (`s`, digits `4`–`9`, `0`) were removed with the start screen, and the slider has no keyboard binding. Should length selection or New puzzle get a keyboard shortcut during Playing? Default: **no** (pointer-only toolbar; §3.6 parity notes).
+3. **Candidate words in `CustomWordPick`.** Default: **send** them (§5.1 rule 3). The user typed the scramble, and the TUI shows the matches. This is not a round answer.
+4. **Affix patterns during play.** They are derived from the lexicon and may reveal a prefix or suffix of the answer. Default: **send** (§5.1 rule 4; TUI parity, cue by design). Alternative: hide until Won.
+5. **Workbench layout.** Option A (free-form canvas) or option B (sparse grid). Default: **B, proposed, pending decision** (§3.4.1).
+6. **Solved-puzzle confirmation.** Should New puzzle, Custom word, and slider moves also confirm when the current puzzle is already won? Default: **no** (§3.1).
+7. **Keyboard length and new-puzzle shortcuts.** The Size-screen keys (`s`, digits `4`–`9`, `0`) were removed with the start screen, and the slider has no keyboard binding. Should length selection or New puzzle get a keyboard shortcut during Playing? Default: **no** (pointer-only toolbar; §3.6 parity notes).
+8. **Confirm dialog keyboard.** Abandon is a button with no key binding; Esc = Cancel. Should Enter or Tab reach Abandon? Default: **no** (keyboard users can cancel but not abandon; §3.6).

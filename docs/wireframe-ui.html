@@ -867,7 +867,7 @@
             <header class="app-header">
               <h2 class="puzzle-title" id="play-title">ANAGRAM <span>· 6 letters</span></h2>
               <div class="app-header__actions">
-                <p class="counter" aria-label="Clue 1 of 3">Clue 1/3</p>
+                <p class="counter" aria-label="Clues used 1 of 3">Clues 1/3</p>
                 <button class="btn" type="button" aria-label="Next clue (Tab)">⇥ Next</button>
                 <button class="btn btn--icon" type="button" aria-label="Help (question mark)">?</button>
               </div>
@@ -941,7 +941,7 @@
                     <div class="cell"></div>
                   </div>
                   <div class="wb-actions">
-                    <p class="wb-caption">Click to select · click a cell to place · drag to move</p>
+                    <p class="wb-caption">Click a tile, then a cell to place · click a filled cell to swap</p>
                     <button class="btn" type="button" aria-label="Clear workbench">Clear</button>
                   </div>
                   <dl class="patterns">
@@ -956,7 +956,7 @@
 
             <footer class="keyhints">
               <span><kbd>←</kbd><kbd>→</kbd> move</span>
-              <span><kbd>⌫</kbd> undo</span>
+              <span><kbd>⌫</kbd> clear</span>
               <span><kbd>Tab</kbd> clue</span>
               <span><kbd>Ctrl+R</kbd> reset</span>
               <span><kbd>?</kbd> help</span>
@@ -1048,7 +1048,7 @@
                   <span class="pick__def">Glittering strands used as decoration.</span>
                 </li>
               </ul>
-              <p class="muted"><kbd>↑</kbd><kbd>↓</kbd> move · <kbd>Enter</kbd> start · <kbd>u</kbd> cancel · <kbd>Esc</kbd> quit</p>
+              <p class="muted"><kbd>↑</kbd><kbd>↓</kbd> move · <kbd>Enter</kbd> start · <kbd>u</kbd> / <kbd>Esc</kbd> cancel</p>
             </div>
           </article>
           <p class="caption"><strong>Fig. 2b</strong> · Custom word pick: highlighted candidate row with definitions.</p>
@@ -1133,7 +1133,8 @@
                     <tr><th scope="row"><kbd>Tab</kbd></th><td>Next clue</td></tr>
                     <tr><th scope="row"><kbd>Ctrl+R</kbd></th><td>Reset round (same word, reshuffled)</td></tr>
                     <tr><th scope="row"><kbd>?</kbd></th><td>Toggle this help</td></tr>
-                    <tr><th scope="row"><kbd>Esc</kbd></th><td>Quit</td></tr>
+                    <tr><th scope="row"><kbd>Esc</kbd></th><td>Close help (Esc also closes any open dialog or input)</td></tr>
+                    <tr><th scope="row"><kbd>⌘Q</kbd></th><td>Quit</td></tr>
                   </tbody>
                 </table>
               </div>
@@ -1166,7 +1167,7 @@
                 <div class="modal__head">
                   <h3 id="confirm-title">Confirm abandon?</h3>
                 </div>
-                <p id="confirm-desc" class="muted">This puzzle is not solved yet. A new puzzle will replace it and the progress will be lost.</p>
+                <p id="confirm-desc" class="muted">This puzzle is not solved yet. Continuing will replace it, and your progress will be lost.</p>
                 <div class="actions">
                   <button class="btn" type="button">Cancel</button>
                   <button class="btn btn--danger" type="button">Abandon</button>
