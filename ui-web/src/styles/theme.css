@@ -1,0 +1,102 @@
+/* Theme tokens (WP-12). Defaults mirror docs/wireframe-ui.html Fig. 1.
+   applyTheme() sets --slot-empty, --slot-filled, --pool, --correct inline on :root,
+   which overrides the color defaults below. Fonts: system stack only (no CDN, CSP). */
+
+:root {
+  color-scheme: dark;
+
+  /* Surfaces and text */
+  --bg: #0F1115;
+  --surface: #1C2029;
+  --surface-2: #232834;
+  --titlebar: #171A21;
+  --border: #2C3340;
+  --text: #E6E9EF;
+  --muted: #8A93A6;
+  --scrim: rgba(7, 9, 12, 0.6);
+
+  /* Config-driven colors (overridden by applyTheme) */
+  --slot-empty: #FF7AD9;
+  --slot-filled: #FFD54A;
+  --pool: #5FE3EA;
+  --correct: #6EE787;
+
+  /* Fixed status color (not configurable) */
+  --wrong: #FF6B6B;
+
+  /* Short aliases used by layout.css and the wireframe */
+  --empty: var(--slot-empty);
+  --filled: var(--slot-filled);
+
+  --tile-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 32px rgba(0, 0, 0, 0.45);
+
+  /* Spacing */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-6: 24px;
+  --s-8: 32px;
+
+  /* Radius */
+  --r-tile: 10px;
+  --r-panel: 14px;
+  --r-key: 6px;
+  --r-btn: 8px;
+
+  /* Typography (system fonts only) */
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, Roboto, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --fs-body: 15px;
+  --fs-small: 13px;
+  --fs-label: 11px;
+  --lh-body: 1.5;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color-scheme: light;
+    --bg: #FAFAF7;
+    --surface: #FFFFFF;
+    --surface-2: #F4F5F8;
+    --titlebar: #EEF0F4;
+    --border: #D9DCE3;
+    --text: #1B1F28;
+    --muted: #5B6474;
+    --scrim: rgba(27, 31, 40, 0.35);
+    --slot-empty: #A61E78;
+    --slot-filled: #8A6100;
+    --pool: #0B7285;
+    --correct: #1A7F37;
+    --wrong: #C92A2A;
+    --tile-shadow: 0 2px 6px rgba(27, 31, 40, 0.12);
+    --shadow: 0 1px 2px rgba(27, 31, 40, 0.08), 0 12px 32px rgba(27, 31, 40, 0.12);
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
