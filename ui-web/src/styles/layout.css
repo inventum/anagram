@@ -9,6 +9,7 @@
   container: play / inline-size;
   box-sizing: border-box;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
   min-width: 0;
   min-height: 100vh;
@@ -134,7 +135,9 @@
   font-weight: 700;
 }
 
-/* Play area: board left, clue and workbench right at >= 880px content width. */
+/* Play area: board left, clue right at >= 880px content width.
+   Below that width the board, clue, workbench, and footer stack.
+   The workbench is a sibling below .play and always spans the full width. */
 .play {
   display: grid;
   gap: 24px;
@@ -144,7 +147,7 @@
 
 @container play (min-width: 880px) {
   .play {
-    grid-template-columns: minmax(0, 1fr) 300px;
+    grid-template-columns: minmax(0, 1fr) 280px;
   }
 }
 
@@ -190,10 +193,10 @@
   display: grid;
   place-items: center;
   box-sizing: border-box;
-  width: 56px;
-  height: 56px;
+  width: clamp(40px, 6vw, 56px);
+  height: clamp(40px, 6vw, 56px);
   border-radius: var(--r-tile, 8px);
-  font-size: 24px;
+  font-size: clamp(18px, 2.5vw, 24px);
   font-weight: 700;
   text-transform: uppercase;
 }
@@ -269,7 +272,7 @@
   color: var(--wrong, #c0392b);
 }
 
-/* Side column: clue panel above the workbench container. */
+/* Side column (wide layout): clue panel only. */
 .side {
   display: grid;
   gap: 16px;
@@ -294,8 +297,10 @@
   color: var(--muted, #888);
 }
 
+/* Workbench panel: full play-window width, below the board and clue. */
 .workbench-slot {
   min-width: 0;
+  width: 100%;
 }
 
 /* Footer key hints. */

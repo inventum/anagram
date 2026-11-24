@@ -39,14 +39,14 @@ const TEMPLATE = `
       </div>
       <p class="status" role="status" data-role="status"><span class="status__icon" aria-hidden="true" data-role="status-icon"></span><span data-role="status-text"></span></p>
     </div>
-    <aside class="side" aria-label="Clue and workbench">
+    <aside class="side" aria-label="Clue">
       <section class="panel" aria-labelledby="clue-label">
         <p class="label" id="clue-label">Clue</p>
         <p class="clue__text" data-role="clue"></p>
       </section>
-      <div class="workbench-slot" data-role="workbench"></div>
     </aside>
   </div>
+  <div class="workbench-slot" data-role="workbench"></div>
   <footer class="keyhints">
     <span><kbd>&#x2190;</kbd><kbd>&#x2192;</kbd> move</span>
     <span><kbd>&#x232B;</kbd> clear</span>

@@ -384,9 +384,12 @@ Defaults in the xterm palette: `light_magenta` → `#ff00ff`, `light_yellow` →
 - **Resizable window.** `tauri.conf.json` declares `minWidth` / `minHeight` (proposed: **640 × 480**) and a default size (proposed: **960 × 640**). Tune both during manual testing.
 - **Responsive layout (CSS):**
   - The top toolbar (§3.1: length slider, Custom word, New puzzle) spans the play panel.
-  - Board (pool, answer row, status) sits in the left play column.
-  - At content width ≥ 880 px, the clue and workbench panels sit in a right column beside the board. Below that width they stack below it.
+  - Board (pool, answer row, status) sits in the left play column. At content width ≥ 880 px, the clue panel is the right column (about 280 px) beside the board.
+  - The letter workbench is a full-width panel below the board and clue, above the footer. Its pool row sits on top; below it the 5×5 grid (at most 260 px square) is on the left and Hand, then Prefix/Suffix patterns, on the right. Below about 520 px panel width, the grid stacks above the side column.
+  - Below 880 px, the board, clue, workbench, and footer stack in one column.
+  - Tile size clamps with viewport width (about 40–56 px) so letter rows fit at 640 px.
   - Pool letters wrap. Clue text wraps.
+  - Footer key hints sit at the very bottom of the window.
   - Help is a modal overlay that lists the desktop key table (§3.6). Close it with `?`, Esc, or ×.
 - **Status text:** errors and wrong-answer feedback use text, not color alone (matching the TUI accessibility rule).
 
