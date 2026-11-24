@@ -36,6 +36,10 @@ const TEMPLATE = `
         <p class="label" id="answer-label">Your answer</p>
         <ol class="answer" aria-labelledby="answer-label" data-role="answer"></ol>
         <p class="solution" data-role="solution"><span class="label">Solution</span> <strong data-role="solution-text"></strong></p>
+        <section class="meaning" aria-labelledby="meaning-label" data-role="meaning" hidden>
+          <p class="label" id="meaning-label">Meaning</p>
+          <p class="meaning__text" data-role="meaning-text"></p>
+        </section>
       </div>
       <p class="status" role="status" data-role="status"><span class="status__icon" aria-hidden="true" data-role="status-icon"></span><span data-role="status-text"></span></p>
     </div>
@@ -67,6 +71,8 @@ interface Refs {
   answer: HTMLElement;
   solution: HTMLElement;
   solutionText: HTMLElement;
+  meaning: HTMLElement;
+  meaningText: HTMLElement;
   statusEl: HTMLElement;
   statusIcon: HTMLElement;
   statusText: HTMLElement;
@@ -99,6 +105,8 @@ function build(root: HTMLElement, ctx: RenderCtx): Refs {
     answer: q(win, '[data-role="answer"]'),
     solution: q(win, '[data-role="solution"]'),
     solutionText: q(win, '[data-role="solution-text"]'),
+    meaning: q(win, '[data-role="meaning"]'),
+    meaningText: q(win, '[data-role="meaning-text"]'),
     statusEl: q(win, '[data-role="status"]'),
     statusIcon: q(win, '[data-role="status-icon"]'),
     statusText: q(win, '[data-role="status-text"]'),
@@ -198,6 +206,11 @@ function renderRound(refs: Refs, r: RoundDto, s: UiState): void {
   const showSolution = won && r.solution !== undefined;
   refs.solution.hidden = !showSolution;
   refs.solutionText.textContent = r.solution ?? '';
+
+  // Meaning panel: Won only, and only when the backend has a definition (SPEC-ui §3.2, §5.5).
+  const meaning = won ? r.definition?.trim() : undefined;
+  refs.meaning.hidden = meaning === undefined || meaning === '';
+  refs.meaningText.textContent = meaning ?? '';
 }
 
 function update(refs: Refs, ctx: RenderCtx): void {

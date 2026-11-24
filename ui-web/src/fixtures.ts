@@ -64,6 +64,7 @@ export const FIXTURES = {
       cursor: 4,
       correct: [true, true, true, true, true],
       solution: 'crate',
+      definition: 'a case or container for transporting goods',
     },
   },
 

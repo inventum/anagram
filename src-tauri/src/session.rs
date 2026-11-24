@@ -92,7 +92,7 @@ impl Session {
         } else {
             None
         };
-        dto::ui_state(&self.state, affix, &engine.theme)
+        dto::ui_state(&self.state, affix, &engine.theme, &engine.dict)
     }
 
     /// Convert and apply one UI action under the caller's lock. Builds no snapshot.

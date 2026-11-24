@@ -55,6 +55,7 @@
 ### 3.2 Gameplay
 
 - Answer slots, scrambled pool that shrinks and grows, cursor-based fill, auto-check when all slots are full, and a Won banner. Rules: [SPEC.md](SPEC.md) §3.2–§3.4.
+- **Won, Meaning panel.** Under the solution, a **Meaning** panel shows the definition of the word the player solved (the typed word, which may be an anagram alternate). It is shown only when the dictionary has a definition for that word; otherwise it is omitted. The status stays "Correct!". No definition is shown in Playing or Help.
 - Reset (same word, reshuffled pool) clears answer and clue state.
 
 ### 3.3 Clues
@@ -283,6 +284,7 @@ pub struct RoundDto {
     pub cursor: usize,
     pub correct: Option<Vec<bool>>,   // Some only while highlight_correct_positions
     pub solution: Option<String>,     // Some only when phase == Won
+    pub definition: Option<String>,   // Some only when phase == Won and the solved word has a definition
 }
 
 pub struct WorkbenchDto {
@@ -318,6 +320,7 @@ pub struct WorkbenchDto {
 | Custom word scramble field (Fig. 2b) | `custom.input` |
 | Pick rows and highlight (Fig. 2b) | `custom.choices`, `custom.pick` |
 | Solved slots and solution (Fig. 2c) | `round.answer` (all green when `phase == won`), `round.solution` |
+| Meaning panel under the solution (Fig. 2c) | `round.definition` (hidden when absent) |
 | Help overlay (Fig. 2d) | `help_open` |
 | Confirm dialog (Fig. 2e) | none; frontend-only state |
 
@@ -341,6 +344,7 @@ pub struct WorkbenchDto {
 | Field | Custom input | Custom pick | Playing / Help | Won |
 |-------|:------------:|:-----------:|:--------------:|:---:|
 | `round.solution` | — | — | — | ✔ |
+| `round.definition` | — | — | — | ✔ (if available) |
 | `round.pool`, `round.answer` | — | — | ✔ | ✔ |
 | `round.correct` | — | — | if highlight on | if highlight on |
 | `custom.choices` | — | ✔ | — | — |

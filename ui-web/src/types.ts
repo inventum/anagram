@@ -28,6 +28,8 @@ export interface RoundDto {
   correct?: boolean[];
   /** Present only when phase is 'won'. */
   solution?: string;
+  /** Present only when phase is 'won' and the solved word has a definition. */
+  definition?: string;
 }
 
 export interface PlacedDto {

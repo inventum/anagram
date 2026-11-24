@@ -255,6 +255,25 @@
   text-transform: uppercase;
 }
 
+/* Meaning panel (Won only): definition of the solved word, under the solution. */
+.meaning {
+  box-sizing: border-box;
+  max-width: 640px;
+  min-width: 0;
+  margin: 0;
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--border, #444);
+  border-radius: var(--r-panel, 12px);
+  background: var(--surface, transparent);
+}
+
+.meaning__text {
+  margin: var(--s-2) 0 0;
+  font-size: var(--fs-body, 15px);
+  line-height: var(--lh-body, 1.5);
+  overflow-wrap: anywhere;
+}
+
 .status {
   display: flex;
   align-items: center;

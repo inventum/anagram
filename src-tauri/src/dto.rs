@@ -75,6 +75,9 @@ pub struct RoundDto {
     /// Key present only when phase is `won`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub solution: Option<String>,
+    /// Meaning of the solved word. Key present only when phase is `won` and the word has a dictionary definition.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub definition: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -180,17 +183,26 @@ pub enum DtoError {
 const WRONG_ANSWER_TEXT: &str = "Not quite — check your letters.";
 
 /// Build the frontend snapshot. Answer data is included only per SPEC-ui §5.5.
-pub fn ui_state(state: &GameState, affix: Option<&AffixHints>, theme: &ThemeDto) -> UiState {
+pub fn ui_state(
+    state: &GameState,
+    affix: Option<&AffixHints>,
+    theme: &ThemeDto,
+    dict: &Dictionary,
+) -> UiState {
     let phase = phase_dto(state.phase);
     // Round, workbench, and clue data are sent only in the play phases (§5.5, R-3).
     let revealed = matches!(state.phase, Phase::Playing | Phase::Help | Phase::Won);
     let custom_phase = matches!(state.phase, Phase::CustomWordInput | Phase::CustomWordPick);
 
     let round = if revealed {
-        state
-            .round
-            .as_ref()
-            .map(|r| round_dto(r, state.highlight_correct_positions, state.phase == Phase::Won))
+        state.round.as_ref().map(|r| {
+            round_dto(
+                r,
+                state.highlight_correct_positions,
+                state.phase == Phase::Won,
+                dict,
+            )
+        })
     } else {
         None
     };
@@ -274,7 +286,7 @@ fn phase_dto(phase: Phase) -> PhaseDto {
     }
 }
 
-fn round_dto(round: &Round, highlight: bool, won: bool) -> RoundDto {
+fn round_dto(round: &Round, highlight: bool, won: bool, dict: &Dictionary) -> RoundDto {
     let n = round.answer.len();
     RoundDto {
         length: n as u8,
@@ -283,7 +295,20 @@ fn round_dto(round: &Round, highlight: bool, won: bool) -> RoundDto {
         cursor: round.cursor,
         correct: highlight.then(|| (0..n).map(|i| round.slot_is_correct(i)).collect()),
         solution: won.then(|| round.solution.clone()),
+        definition: if won { solved_definition(round, dict) } else { None },
     }
+}
+
+/// Meaning of the word the player typed to win (SPEC-ui §3.2, §5.5). Uses the same
+/// `WordEntry.definition` that the custom pick list shows. The typed answer may be an
+/// anagram alternate, not only `round.solution`, so the lookup is by typed letters.
+/// Words outside the dictionary (custom fallback) have no meaning and yield `None`.
+fn solved_definition(round: &Round, dict: &Dictionary) -> Option<String> {
+    let typed: String = round.answer.iter().copied().collect::<Option<String>>()?;
+    dict.entry_for_word(&typed)?
+        .definition
+        .clone()
+        .filter(|d| !d.trim().is_empty())
 }
 
 fn status_dto(status: &Status) -> StatusDto {
@@ -442,7 +467,16 @@ mod tests {
     }
 
     fn snapshot(state: &GameState, affix: Option<&AffixHints>) -> Value {
-        serde_json::to_value(ui_state(state, affix, &theme())).expect("serialize")
+        serde_json::to_value(ui_state(state, affix, &theme(), &data().0)).expect("serialize")
+    }
+
+    /// Type `word` letter by letter into the round (pool holds its letters).
+    fn type_word(state: &mut GameState, word: &str) {
+        let round = state.round.as_mut().expect("round");
+        for ch in word.chars() {
+            assert!(round.try_type_letter(ch), "type {ch}");
+        }
+        assert!(round.is_answer_full());
     }
 
     fn all_strings(v: &Value, out: &mut Vec<String>) {
@@ -488,6 +522,76 @@ mod tests {
         let v = snapshot(&state, None);
         assert_eq!(v["phase"], "won");
         assert_eq!(v["round"]["solution"], solution.as_str());
+    }
+
+    #[test]
+    fn definition_absent_in_playing_and_help() {
+        let mut state = playing("crate");
+        assert!(snapshot(&state, None)["round"].get("definition").is_none());
+        state.phase = Phase::Help;
+        state.help_open = true;
+        assert!(snapshot(&state, None)["round"].get("definition").is_none());
+    }
+
+    #[test]
+    fn definition_present_in_won_from_dictionary() {
+        let (dict, _) = data();
+        let mut state = playing("crate");
+        type_word(&mut state, "crate");
+        state.phase = Phase::Won;
+        let expected = dict
+            .entry_for_word("crate")
+            .and_then(|e| e.definition.clone())
+            .expect("crate has a definition");
+        let v = snapshot(&state, None);
+        assert_eq!(v["round"]["definition"], expected.as_str());
+        assert!(!expected.is_empty());
+    }
+
+    #[test]
+    fn definition_follows_typed_alternate_when_won() {
+        let (dict, _) = data();
+        let mut state = playing("aliment");
+        type_word(&mut state, "ailment");
+        state.phase = Phase::Won;
+        let expected = dict
+            .entry_for_word("ailment")
+            .and_then(|e| e.definition.clone())
+            .expect("ailment has a definition");
+        let v = snapshot(&state, None);
+        assert_eq!(v["round"]["definition"], expected.as_str());
+    }
+
+    #[test]
+    fn definition_absent_for_word_outside_dictionary() {
+        let (dict, index) = data();
+        let mut state = start_custom_word(
+            GameState::new(5),
+            "qxzvw",
+            dict,
+            index,
+            &mut StdRng::seed_from_u64(7),
+        );
+        assert_eq!(state.phase, Phase::Playing);
+        type_word(&mut state, "qxzvw");
+        state.phase = Phase::Won;
+        let v = snapshot(&state, None);
+        assert_eq!(v["round"]["solution"], "QXZVW");
+        assert!(v["round"].get("definition").is_none());
+    }
+
+    #[test]
+    fn definition_absent_in_custom_phases() {
+        let mut state = playing("crate");
+        type_word(&mut state, "crate");
+        state.phase = Phase::CustomWordInput;
+        let v = snapshot(&state, None);
+        assert!(v["round"].is_null());
+        assert!(!v.to_string().contains("\"definition\""));
+        state.phase = Phase::CustomWordPick;
+        let v = snapshot(&state, None);
+        assert!(v["round"].is_null());
+        assert!(v["round"].get("definition").is_none());
     }
 
     #[test]
