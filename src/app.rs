@@ -34,6 +34,7 @@ pub enum Action {
     Backspace,
     CursorLeft,
     CursorRight,
+    CursorSet(usize),
     OpenCustomWord,
     CustomWordType(char),
     CustomWordBackspace,
@@ -47,6 +48,10 @@ pub enum Action {
     WorkbenchClearCell,
     WorkbenchTypeLetter(char),
     WorkbenchResetGrid,
+    CustomPickSelect(usize),
+    WorkbenchClickCell(usize),
+    WorkbenchClickPool(usize),
+    SetInputFocus(InputFocus),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -163,6 +168,7 @@ pub fn reduce(
         Action::Backspace => reduce_backspace(&mut state),
         Action::CursorLeft => reduce_cursor(&mut state, -1),
         Action::CursorRight => reduce_cursor(&mut state, 1),
+        Action::CursorSet(idx) => reduce_cursor_set(&mut state, idx),
         Action::OpenCustomWord => reduce_open_custom_word(&mut state),
         Action::CustomWordType(ch) => reduce_custom_word_type(&mut state, ch),
         Action::CustomWordBackspace => reduce_custom_word_backspace(&mut state),
@@ -176,8 +182,38 @@ pub fn reduce(
         Action::WorkbenchClearCell => reduce_workbench_clear_cell(&mut state),
         Action::WorkbenchTypeLetter(ch) => reduce_workbench_type_letter(&mut state, ch),
         Action::WorkbenchResetGrid => reduce_workbench_reset_grid(&mut state, rng),
+        Action::CustomPickSelect(i) => reduce_custom_pick_select(&mut state, i),
+        Action::WorkbenchClickCell(i) => reduce_workbench_click_cell(&mut state, i),
+        Action::WorkbenchClickPool(i) => reduce_workbench_click_pool(&mut state, i),
+        Action::SetInputFocus(f) => reduce_set_input_focus(&mut state, f),
     }
     state
+}
+
+fn reduce_custom_pick_select(state: &mut GameState, idx: usize) {
+    if state.phase != Phase::CustomWordPick || idx >= state.custom_word_choices.len() {
+        return;
+    }
+    state.custom_word_pick = idx;
+}
+
+fn reduce_workbench_click_cell(state: &mut GameState, idx: usize) {
+    if let Some(wb) = state.workbench.as_mut() {
+        let _ = wb.click_cell(idx);
+    }
+}
+
+fn reduce_workbench_click_pool(state: &mut GameState, idx: usize) {
+    if let Some(wb) = state.workbench.as_mut() {
+        let _ = wb.click_pool(idx);
+    }
+}
+
+fn reduce_set_input_focus(state: &mut GameState, focus: InputFocus) {
+    if focus == InputFocus::Grid && state.workbench.is_none() {
+        return;
+    }
+    state.input_focus = focus;
 }
 
 fn reduce_toggle_workbench_focus(state: &mut GameState) {
@@ -545,6 +581,19 @@ fn reduce_cursor(state: &mut GameState, delta: i32) {
         return;
     };
     if round.move_cursor(delta) {
+        state.status = Status::None;
+    }
+}
+
+fn reduce_cursor_set(state: &mut GameState, idx: usize) {
+    if !matches!(state.phase, Phase::Playing | Phase::Help) {
+        return;
+    }
+    let Some(round) = state.round.as_mut() else {
+        return;
+    };
+    if idx < round.answer.len() {
+        round.cursor = idx;
         state.status = Status::None;
     }
 }
@@ -977,6 +1026,53 @@ mod tests {
     }
 
     #[test]
+    fn cursor_set_moves_cursor_in_range() {
+        let (mut state, dict, index, mut rng) = seeded_dict_playing(55, 5);
+        state = reduce(state, Action::CursorSet(3), &dict, &index, &mut rng);
+        assert_eq!(state.round.as_ref().unwrap().cursor, 3);
+        state = reduce(state, Action::CursorSet(0), &dict, &index, &mut rng);
+        assert_eq!(state.round.as_ref().unwrap().cursor, 0);
+    }
+
+    #[test]
+    fn cursor_set_out_of_range_is_noop() {
+        let (mut state, dict, index, mut rng) = seeded_dict_playing(55, 5);
+        state = reduce(state, Action::CursorSet(2), &dict, &index, &mut rng);
+        state = reduce(state, Action::CursorSet(5), &dict, &index, &mut rng);
+        state = reduce(state, Action::CursorSet(usize::MAX), &dict, &index, &mut rng);
+        assert_eq!(state.round.as_ref().unwrap().cursor, 2);
+    }
+
+    #[test]
+    fn cursor_set_ignored_outside_play_phases() {
+        let (mut state, dict, index, mut rng) = seeded_dict_playing(55, 5);
+        for phase in [
+            Phase::Won,
+            Phase::CustomWordInput,
+            Phase::CustomWordPick,
+            Phase::Menu,
+        ] {
+            state.phase = phase;
+            state = reduce(state, Action::CursorSet(4), &dict, &index, &mut rng);
+            assert_eq!(state.round.as_ref().unwrap().cursor, 0, "{phase:?}");
+        }
+        state.phase = Phase::Help;
+        state = reduce(state, Action::CursorSet(4), &dict, &index, &mut rng);
+        assert_eq!(state.round.as_ref().unwrap().cursor, 4);
+    }
+
+    #[test]
+    fn cursor_set_then_type_fills_clicked_slot() {
+        let (mut state, dict, index, mut rng) = seeded_dict_playing(55, 5);
+        let letter = state.round.as_ref().unwrap().pool[0];
+        state = reduce(state, Action::CursorSet(2), &dict, &index, &mut rng);
+        state = reduce(state, Action::TypeLetter(letter), &dict, &index, &mut rng);
+        let round = state.round.as_ref().unwrap();
+        assert_eq!(round.answer[2], Some(letter));
+        assert!(round.answer[0].is_none());
+    }
+
+    #[test]
     fn new_puzzle_prefers_different_word_at_same_size() {
         let dict = Dictionary::from_embedded().unwrap();
         let mut rng = StdRng::seed_from_u64(77);
@@ -1249,5 +1345,69 @@ mod tests {
             .cells
             .iter()
             .all(|c| c.is_none()));
+    }
+
+    #[test]
+    fn custom_pick_select_only_in_pick_phase_and_bounded() {
+        let dict = Dictionary::from_embedded().unwrap();
+        let index = embedded_index();
+        let mut rng = StdRng::seed_from_u64(610);
+        let choices: Vec<WordEntry> = dict
+            .words_with_length(5)
+            .into_iter()
+            .take(3)
+            .cloned()
+            .collect();
+        assert_eq!(choices.len(), 3);
+        let mut state = GameState::new(5);
+        state.custom_word_choices = choices;
+        state.phase = Phase::CustomWordPick;
+        state = reduce(state, Action::CustomPickSelect(2), &dict, &index, &mut rng);
+        assert_eq!(state.custom_word_pick, 2);
+        assert_eq!(state.phase, Phase::CustomWordPick);
+        state = reduce(state, Action::CustomPickSelect(3), &dict, &index, &mut rng);
+        assert_eq!(state.custom_word_pick, 2);
+        state.phase = Phase::Playing;
+        state = reduce(state, Action::CustomPickSelect(0), &dict, &index, &mut rng);
+        assert_eq!(state.custom_word_pick, 2);
+        assert_eq!(state.phase, Phase::Playing);
+    }
+
+    #[test]
+    fn set_input_focus_grid_ignored_without_workbench() {
+        let dict = Dictionary::from_embedded().unwrap();
+        let index = embedded_index();
+        let mut rng = StdRng::seed_from_u64(611);
+        let state = reduce(GameState::new(5), Action::NewPuzzle, &dict, &index, &mut rng);
+        assert!(state.workbench.is_none());
+        let state = reduce(state, Action::SetInputFocus(InputFocus::Grid), &dict, &index, &mut rng);
+        assert_eq!(state.input_focus, InputFocus::Answer);
+
+        let mut state = reduce(state_with_workbench(5), Action::NewPuzzle, &dict, &index, &mut rng);
+        state = reduce(state, Action::SetInputFocus(InputFocus::Grid), &dict, &index, &mut rng);
+        assert_eq!(state.input_focus, InputFocus::Grid);
+        state = reduce(state, Action::SetInputFocus(InputFocus::Answer), &dict, &index, &mut rng);
+        assert_eq!(state.input_focus, InputFocus::Answer);
+    }
+
+    #[test]
+    fn workbench_click_actions_reduce_and_keep_round_pool() {
+        let dict = Dictionary::from_embedded().unwrap();
+        let index = embedded_index();
+        let mut rng = StdRng::seed_from_u64(612);
+        let state = reduce(GameState::new(5), Action::NewPuzzle, &dict, &index, &mut rng);
+        let state = reduce(state, Action::WorkbenchClickCell(0), &dict, &index, &mut rng);
+        assert!(state.workbench.is_none());
+
+        let mut state = reduce(state_with_workbench(5), Action::NewPuzzle, &dict, &index, &mut rng);
+        let round_pool = state.round.as_ref().unwrap().pool.clone();
+        state = reduce(state, Action::WorkbenchClickPool(0), &dict, &index, &mut rng);
+        assert!(state.workbench.as_ref().unwrap().held.is_some());
+        assert_eq!(state.workbench.as_ref().unwrap().pool.len(), 4);
+        state = reduce(state, Action::WorkbenchClickCell(0), &dict, &index, &mut rng);
+        let wb = state.workbench.as_ref().unwrap();
+        assert!(wb.cells[0].is_some());
+        assert_eq!(wb.held, None);
+        assert_eq!(state.round.as_ref().unwrap().pool, round_pool);
     }
 }

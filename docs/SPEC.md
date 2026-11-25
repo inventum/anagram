@@ -18,7 +18,7 @@
 | Clear visual link between scrambled letters and answer dashes | Multiplayer / networking |
 | Letter pool shrinks/grows as user types/deletes | Timed modes or leaderboards (v1) |
 | User picks puzzle size (letter count) | Full dictionary validation of every partial guess (v2+) |
-| Optional clues | Graphical UI |
+| Optional clues | Graphical UI: out of scope for the terminal spec; see [SPEC-ui.md](SPEC-ui.md) for the Tauri desktop UI. |
 | Works in standard 80×24+ terminals | Account/login |
 | Unit-tested core game logic (see §6.6) | End-to-end terminal integration tests (v1) |
 
