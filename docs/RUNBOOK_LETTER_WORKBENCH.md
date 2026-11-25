@@ -1,25 +1,27 @@
 # Letter Workbench — Implementation Runbook
 
-**Version:** 1.5  
+**Version:** 1.6  
 **Spec:** [SPEC_LETTER_WORKBENCH.md](./SPEC_LETTER_WORKBENCH.md) (v1.2)  
 **Parent:** [RUNBOOK.md](./RUNBOOK.md), [SPEC.md](./SPEC.md)  
 
-**Goal:** Optional cue grid (separate grid pool, `[g]` focus, Space pick/place). Answer / win unchanged. **Parallel subagents**, strict file ownership.
+**Goal:** Optional cue grid (separate grid pool, Ctrl+G focus toggle, Space pick/place). Answer / win unchanged. **Parallel subagents**, strict file ownership.
 
 **Non-goals:** lexicon, signature index, CLI `solve`, `game.rs` edits.
+
+**Desktop:** pointer-only workbench, no keyboard bindings (see [SPEC-ui.md](./SPEC-ui.md) §3.4 and §3.4.1). This runbook covers the TUI only.
 
 ---
 
 ## Infrastructure
 
-| Item | Today | After feature |
+| Item | Pre-feature | Shipped |
 |------|--------|----------------|
 | `map_event(&Event, Phase)` | Shipped | `map_event(&Event, &EventContext)` (**W0**) |
 | `reduce` | `dict`, `index`, `rng` — no config | uses `GameState.workbench_settings` |
-| `run_play` | `with_bounds` + loop | W0 sets `workbench_settings` from `AppConfig` |
-| `workbench.rs` / grid UI | absent | W1–W2 |
+| `run_play` (`lib.rs`) | `with_bounds` + loop | `with_bounds`, then `workbench_settings` from `AppConfig` |
+| `workbench.rs` / grid UI | absent | `workbench.rs`, `ui.rs` `draw_workbench` (W1–W2) |
 
-**Prerequisites:** Rust ≥ 1.75, `cargo test`, SPEC §3.1.
+**Prerequisites:** Rust ≥ 1.75, `cargo test`, SPEC.md §3.1.
 
 ---
 
@@ -59,16 +61,16 @@ map_event(event, ctx):
     if CONTROL modifier:
       if Ctrl+C: return Quit
       if Ctrl+R and phase in {Playing, Help}: return ResetRound
-      // Ctrl+G handled in grid branch only — do NOT return None from whole function here; fall through
+      // Ctrl+G handled in the workbench branches below — do NOT return None from whole function here; fall through
     if phase == CustomWordInput: return custom_input_map(...)
     if phase == CustomWordPick: return custom_pick_map(...)
 
     if phase in {Playing, Help}:
       if !ctx.has_workbench:
         return map_playing(...)
-      if key in {g, G}: return ToggleWorkbenchFocus
+      if Ctrl+G (no SHIFT): return ToggleWorkbenchFocus
       if ctx.input_focus == Grid:
-        if action := grid_map(...): return action   // F: arrows, Space, Backspace, Ctrl+G
+        if action := grid_map(...): return action   // F: arrows, Space, Backspace, a–z, Ctrl+Shift+G
         if key in {?, Esc}: return map_playing(...) // help / quit only
         return None
       // Answer focus + has_workbench
@@ -76,7 +78,7 @@ map_event(event, ctx):
 
     if phase == Won:
       if ctx.has_workbench:
-        if key in {g, G}: return ToggleWorkbenchFocus
+        if Ctrl+G (no SHIFT): return ToggleWorkbenchFocus
         if ctx.input_focus == Grid:
           if action := grid_map(...): return action
           return None
@@ -87,9 +89,9 @@ map_event(event, ctx):
 
 **`EventContext`:** `phase`, `input_focus`, `has_workbench` (= `state.workbench.is_some()`).
 
-**Grid map (F):** arrows → `WorkbenchMove`; Space → `WorkbenchPickPlace`; Backspace → `WorkbenchClearCell`; **Ctrl+G** → `WorkbenchResetGrid`; else `None`.
+**Grid map (F):** arrows → `WorkbenchMove`; Space → `WorkbenchPickPlace`; Backspace → `WorkbenchClearCell`; `a`–`z` → `WorkbenchTypeLetter` (fills the cursor cell from the grid pool when empty); **Ctrl+Shift+G** → `WorkbenchResetGrid`; else `None`. Ctrl+G (no Shift) is matched before `grid_map` and toggles focus in both Answer and Grid focus. See Risks for the Ctrl+Shift+G open issue.
 
-**Playing + grid focus:** menu letters (`n`, `s`, …) are **no-op** in v1 (SPEC: grid `a`–`z` no-op; same for other non-grid keys except `?`/`Esc`). **`n` New** is only on **Won/Menu** via `map_navigation` (matches shipped `map_playing` treating `n` as a letter).
+**Playing + grid focus:** `a`–`z` (including `n`, `s`, `c`, `r`, `i`) → `WorkbenchTypeLetter` into the grid, not the answer; `?` / `Esc` keep their Playing meanings; Tab and other keys are **no-op**. **`n` New** works from Menu, or from Won with Answer focus (`map_navigation`); from Won with Grid focus `n` types into the grid. SPEC_LETTER_WORKBENCH §3.3 says grid letters are a no-op in v1; the code types them, so code is authoritative.
 
 ---
 
@@ -102,7 +104,7 @@ map_event(event, ctx):
 | 0.3 | `InputFocus`, `workbench: Option<LetterWorkbench>`, `input_focus` (`app.rs`) |
 | 0.4 | `WorkbenchSettings { enabled, rows, cols }` in **`config.rs`** |
 | 0.5 | `workbench_settings: WorkbenchSettings` on `GameState` |
-| 0.6 | `AppConfig`: serde fields + `pub fn workbench_settings(&self) -> WorkbenchSettings` (clamp 5×5; CF refines) |
+| 0.6 | `AppConfig`: serde fields + `pub fn workbench_settings(&self) -> WorkbenchSettings` (square 4 or 5 kept; any other combination → 5×5; CF refines) |
 | 0.7 | Workbench `Action` variants; no-op `reduce` arms (`app.rs`) |
 | 0.8 | `EventContext`, `map_event(event, &ctx)`, `from_state` (`input.rs`) |
 | 0.9 | Update **all** `input` tests (`ctx_for_phase`) |
@@ -118,7 +120,7 @@ map_event(event, ctx):
 | Track | Scope | Done when |
 |-------|--------|-----------|
 | **LW** | `workbench.rs` — SPEC §4.2–5.1, seeded tests | `cargo test workbench` |
-| **CF** | `config.rs` — clamp 4×4 / 5×5 square; TOML tests | `cargo test config` |
+| **CF** | `config.rs` — `workbench_settings()`: square 4×4 / 5×5 kept, else 5×5; TOML tests | `cargo test config` |
 
 **CP1:** LW + CF merged; full `cargo test`; no workbench UI.
 
@@ -158,10 +160,10 @@ cargo test && cargo build --release
 | Check | Expected |
 |-------|----------|
 | Dual pools 2N on screen | After AP+UI |
-| `[g]`, Space, Ctrl+G grid | IN+AP |
+| Ctrl+G focus, Space, Ctrl+Shift+G reset (open, see Risks) | IN+AP |
 | Answer win path | Unchanged |
 | `workbench = false` | `workbench: None`, no panel |
-| Won `[i]` / `[g]` | IN routing |
+| Won `[i]` / Ctrl+G | IN routing |
 
 ---
 
@@ -176,7 +178,7 @@ cargo test && cargo build --release
 | CP2 | — | 1 |
 | W3 | HLP, DOC | 1 (preferred) |
 
-~3.5h (SPEC §8).
+~2–3 days (SPEC_LETTER_WORKBENCH §8).
 
 ---
 
@@ -200,11 +202,12 @@ cargo test && cargo build --release
 | Risk | Mitigation |
 |------|------------|
 | Input tests break at W0 | Step 0.9 |
-| `g` → TypeLetter | Toggle before `map_playing` |
+| Plain `g` in Answer focus types a letter | Ctrl+G toggle is checked before `map_playing` |
 | Ctrl+G eaten by global Ctrl handler | Ctrl branch must **fall through** when not C/R |
 | Won loses `i`/`n` | Won path ends with `map_navigation` |
 | AP∥IN | Merge AP first |
-| Grid on short terminal | UI collapse; optional later: skip `init` |
+| Grid on short terminal | UI collapses or skips the panel (`workbench_draw_mode`); workbench is still initialized |
+| **Open:** Ctrl+Shift+G reset likely unreachable | `terminal.rs` requests no keyboard enhancement, so Ctrl+Shift+G likely arrives as Ctrl+G and toggles focus. Not fixed; not verified in a live terminal |
 
 ---
 
@@ -220,7 +223,7 @@ cargo test && cargo build --release
 
 ```
 Path: /Users/vijay/work/anagram
-Runbook: RUNBOOK_LETTER_WORKBENCH.md v1.5
+Runbook: RUNBOOK_LETTER_WORKBENCH.md v1.6
 Track: {TRACK}
 Spec: SPEC_LETTER_WORKBENCH.md v1.2
 Ownership table only. cargo test. No game.rs.
@@ -232,5 +235,6 @@ Ownership table only. cargo test. No game.rs.
 
 | Ver | Notes |
 |-----|--------|
+| 1.6 | Keys: Ctrl+G focus, Ctrl+Shift+G reset (open); grid letters type into grid; config fallback; desktop note; estimate; Pre-feature column |
 | 1.5 | `map_event` pseudocode; Ctrl fall-through; grid Playing command keys; CP rows; shrink duplication; spec link |
 | 1.4 | Routing F, lib W0-only |
