@@ -26,6 +26,11 @@ cargo tauri build --bundles app        # output: target/release/bundle/macos/Ana
 
 See [INSTALL.md](INSTALL.md) for prerequisites, configuration, and troubleshooting.
 
+## Third-party data
+
+Word lists and definitions in `data/` are derived from Princeton WordNet 3.0. See [data/ATTRIBUTION.md](data/ATTRIBUTION.md) for attribution and the WordNet license notice.
+The project is licensed under the MIT License; see [LICENSE.md](LICENSE.md).
+
 ## Documentation
 
 - [docs/SPEC.md](docs/SPEC.md): terminal game specification
