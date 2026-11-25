@@ -34,6 +34,7 @@ pub enum Action {
     Backspace,
     CursorLeft,
     CursorRight,
+    CursorSet(usize),
     OpenCustomWord,
     CustomWordType(char),
     CustomWordBackspace,
@@ -167,6 +168,7 @@ pub fn reduce(
         Action::Backspace => reduce_backspace(&mut state),
         Action::CursorLeft => reduce_cursor(&mut state, -1),
         Action::CursorRight => reduce_cursor(&mut state, 1),
+        Action::CursorSet(idx) => reduce_cursor_set(&mut state, idx),
         Action::OpenCustomWord => reduce_open_custom_word(&mut state),
         Action::CustomWordType(ch) => reduce_custom_word_type(&mut state, ch),
         Action::CustomWordBackspace => reduce_custom_word_backspace(&mut state),
@@ -579,6 +581,19 @@ fn reduce_cursor(state: &mut GameState, delta: i32) {
         return;
     };
     if round.move_cursor(delta) {
+        state.status = Status::None;
+    }
+}
+
+fn reduce_cursor_set(state: &mut GameState, idx: usize) {
+    if !matches!(state.phase, Phase::Playing | Phase::Help) {
+        return;
+    }
+    let Some(round) = state.round.as_mut() else {
+        return;
+    };
+    if idx < round.answer.len() {
+        round.cursor = idx;
         state.status = Status::None;
     }
 }
@@ -1008,6 +1023,53 @@ mod tests {
         assert_eq!(state.clues_used, 0);
         assert!(state.active_clue_text.is_none());
         assert_eq!(state.round.as_ref().unwrap().cursor, 0);
+    }
+
+    #[test]
+    fn cursor_set_moves_cursor_in_range() {
+        let (mut state, dict, index, mut rng) = seeded_dict_playing(55, 5);
+        state = reduce(state, Action::CursorSet(3), &dict, &index, &mut rng);
+        assert_eq!(state.round.as_ref().unwrap().cursor, 3);
+        state = reduce(state, Action::CursorSet(0), &dict, &index, &mut rng);
+        assert_eq!(state.round.as_ref().unwrap().cursor, 0);
+    }
+
+    #[test]
+    fn cursor_set_out_of_range_is_noop() {
+        let (mut state, dict, index, mut rng) = seeded_dict_playing(55, 5);
+        state = reduce(state, Action::CursorSet(2), &dict, &index, &mut rng);
+        state = reduce(state, Action::CursorSet(5), &dict, &index, &mut rng);
+        state = reduce(state, Action::CursorSet(usize::MAX), &dict, &index, &mut rng);
+        assert_eq!(state.round.as_ref().unwrap().cursor, 2);
+    }
+
+    #[test]
+    fn cursor_set_ignored_outside_play_phases() {
+        let (mut state, dict, index, mut rng) = seeded_dict_playing(55, 5);
+        for phase in [
+            Phase::Won,
+            Phase::CustomWordInput,
+            Phase::CustomWordPick,
+            Phase::Menu,
+        ] {
+            state.phase = phase;
+            state = reduce(state, Action::CursorSet(4), &dict, &index, &mut rng);
+            assert_eq!(state.round.as_ref().unwrap().cursor, 0, "{phase:?}");
+        }
+        state.phase = Phase::Help;
+        state = reduce(state, Action::CursorSet(4), &dict, &index, &mut rng);
+        assert_eq!(state.round.as_ref().unwrap().cursor, 4);
+    }
+
+    #[test]
+    fn cursor_set_then_type_fills_clicked_slot() {
+        let (mut state, dict, index, mut rng) = seeded_dict_playing(55, 5);
+        let letter = state.round.as_ref().unwrap().pool[0];
+        state = reduce(state, Action::CursorSet(2), &dict, &index, &mut rng);
+        state = reduce(state, Action::TypeLetter(letter), &dict, &index, &mut rng);
+        let round = state.round.as_ref().unwrap();
+        assert_eq!(round.answer[2], Some(letter));
+        assert!(round.answer[0].is_none());
     }
 
     #[test]

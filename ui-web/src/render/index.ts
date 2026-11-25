@@ -145,6 +145,20 @@ function build(root: HTMLElement, ctx: RenderCtx): Refs {
   refs.answer.addEventListener('click', () => {
     refs.ctx.dispatch({ type: 'workbenchSetFocus', focus: 'answer' });
   });
+  // Click a slot: move the cursor there (FIFO after the focus ring above, D-15).
+  refs.answer.addEventListener('click', (e) => {
+    const slot = e.target instanceof Element ? e.target.closest<HTMLElement>('.slot[data-idx]') : null;
+    if (slot !== null) {
+      refs.ctx.dispatch({ type: 'setCursor', idx: Number(slot.dataset.idx) });
+    }
+  });
+  // Click a pool tile: type that letter into the cursor slot, as the keyboard does.
+  refs.pool.addEventListener('click', (e) => {
+    const tile = e.target instanceof Element ? e.target.closest<HTMLButtonElement>('button.tile') : null;
+    if (tile !== null) {
+      refs.ctx.dispatch({ type: 'typeLetter', ch: (tile.textContent ?? '').toLowerCase() });
+    }
+  });
 
   return refs;
 }
@@ -162,7 +176,10 @@ function syncList(parent: HTMLElement, count: number, makeNode: () => HTMLElemen
 
 function makeTile(): HTMLElement {
   const li = document.createElement('li');
-  li.className = 'tile';
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'tile';
+  li.append(btn);
   return li;
 }
 
@@ -178,7 +195,9 @@ function renderRound(refs: Refs, r: RoundDto, s: UiState): void {
 
   const tiles = syncList(refs.pool, r.pool.length, makeTile);
   r.pool.forEach((ch, i) => {
-    tiles[i].textContent = ch;
+    const btn = tiles[i].firstElementChild as HTMLButtonElement;
+    btn.textContent = ch;
+    btn.setAttribute('aria-label', `pool letter ${ch.toUpperCase()}`);
   });
 
   const slots = syncList(refs.answer, r.answer.length, makeSlot);
@@ -188,6 +207,7 @@ function renderRound(refs: Refs, r: RoundDto, s: UiState): void {
     const slot = slots[i];
     const correct = won || r.correct?.[i] === true;
     const cursor = i === r.cursor;
+    slot.dataset.idx = String(i);
     const [letter, mark, srText] = Array.from(slot.children) as HTMLElement[];
 
     slot.className = ['slot', ch === null ? 'is-empty' : 'is-filled', correct ? 'is-correct' : '']

@@ -119,6 +119,13 @@ Authoritative source: `src/input.rs`, with the desktop deviations below. Keys ar
 | `?` | Toggle help overlay |
 | Ctrl+R | Reset round (same word, reshuffled) |
 
+**Playing / Help — answer and pool pointer**
+
+| Pointer action | Effect |
+|----------------|--------|
+| Click answer slot | Move the cursor to that slot (`setCursor { idx }`). Filled slots too; no fill |
+| Click pool tile | Type that letter into the cursor slot, same as the keyboard (`typeLetter { ch }`, lowercase); no-op if the cursor slot is filled, as on the keyboard |
+
 **Workbench — pointer** (Playing, Help, Won; no keyboard bindings)
 
 | Pointer action | Effect |
@@ -328,7 +335,7 @@ pub struct WorkbenchDto {
 
 - Serde tagged enum: `#[serde(tag = "type", rename_all = "camelCase")]`.
 - Keyboard and toolbar variants map 1:1 to `app::Action`:
-  - `toggleHelp`, `newPuzzle`, `resetRound`, `requestClue`, `backspace`, `cursorLeft`, `cursorRight`, `typeLetter { ch }`
+  - `toggleHelp`, `newPuzzle`, `resetRound`, `requestClue`, `backspace`, `cursorLeft`, `cursorRight`, `setCursor { idx }` (answer slot click), `typeLetter { ch }`
   - `selectSize { n }` (slider release)
   - `openCustomWord`, `customWordType { ch }`, `customWordBackspace`, `submitCustomWord`
   - `cancelCustomWord` (the backend also runs `newPuzzle`, §3.1)

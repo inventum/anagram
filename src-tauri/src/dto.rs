@@ -158,6 +158,7 @@ pub enum ActionDto {
     Backspace,
     CursorLeft,
     CursorRight,
+    SetCursor { idx: usize },
     TypeLetter { ch: char },
     SelectSize { n: u8 },
     OpenCustomWord,
@@ -400,6 +401,7 @@ impl ActionDto {
             ActionDto::Backspace => vec![Action::Backspace],
             ActionDto::CursorLeft => vec![Action::CursorLeft],
             ActionDto::CursorRight => vec![Action::CursorRight],
+            ActionDto::SetCursor { idx } => vec![Action::CursorSet(idx)],
             ActionDto::TypeLetter { ch } => vec![Action::TypeLetter(letter(ch)?)],
             ActionDto::SelectSize { n } => vec![Action::SelectSize(n)],
             ActionDto::OpenCustomWord => vec![Action::OpenCustomWord],
@@ -773,6 +775,7 @@ mod tests {
         assert_eq!(acts(ActionDto::Backspace), "[Backspace]");
         assert_eq!(acts(ActionDto::CursorLeft), "[CursorLeft]");
         assert_eq!(acts(ActionDto::CursorRight), "[CursorRight]");
+        assert_eq!(acts(ActionDto::SetCursor { idx: 2 }), "[CursorSet(2)]");
         assert_eq!(acts(ActionDto::TypeLetter { ch: 'a' }), "[TypeLetter('a')]");
         assert_eq!(acts(ActionDto::SelectSize { n: 6 }), "[SelectSize(6)]");
         assert_eq!(acts(ActionDto::OpenCustomWord), "[OpenCustomWord]");
@@ -831,6 +834,8 @@ mod tests {
     fn wire_format_deserializes() {
         let a: ActionDto = serde_json::from_str(r#"{"type":"typeLetter","ch":"a"}"#).unwrap();
         assert_eq!(a, ActionDto::TypeLetter { ch: 'a' });
+        let s: ActionDto = serde_json::from_str(r#"{"type":"setCursor","idx":2}"#).unwrap();
+        assert_eq!(s, ActionDto::SetCursor { idx: 2 });
         let f: ActionDto =
             serde_json::from_str(r#"{"type":"workbenchSetFocus","focus":"grid"}"#).unwrap();
         assert_eq!(

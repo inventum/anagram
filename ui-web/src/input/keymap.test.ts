@@ -37,6 +37,19 @@ describe('keyToAction: playing / help (answer focus, SPEC-ui §3.6)', () => {
         expect(keyToAction(key('Z', { shiftKey: true }), c)).toEqual({ type: 'typeLetter', ch: 'z' });
       });
 
+      it('keeps typing and arrows unchanged; pointer setCursor is never a key action', () => {
+        // Same payload a pool tile click sends: { type: 'typeLetter', ch: lowercase }.
+        expect(keyToAction(key('E', { shiftKey: true }), c)).toEqual({ type: 'typeLetter', ch: 'e' });
+        for (const l of LETTERS) {
+          expect(keyToAction(key(l), c)?.type).toBe('typeLetter');
+        }
+        expect(keyToAction(key('ArrowLeft'), c)).toEqual({ type: 'cursorLeft' });
+        expect(keyToAction(key('ArrowRight'), c)).toEqual({ type: 'cursorRight' });
+        for (const k of ['ArrowLeft', 'ArrowRight', 'Backspace', 'Tab', 'a']) {
+          expect(keyToAction(key(k), c)?.type).not.toBe('setCursor');
+        }
+      });
+
       it('maps ArrowLeft and ArrowRight to cursor moves', () => {
         expect(keyToAction(key('ArrowLeft'), c)).toEqual({ type: 'cursorLeft' });
         expect(keyToAction(key('ArrowRight'), c)).toEqual({ type: 'cursorRight' });

@@ -102,6 +102,7 @@ export type ActionDto =
   | { type: 'backspace' }
   | { type: 'cursorLeft' }
   | { type: 'cursorRight' }
+  | { type: 'setCursor'; idx: number }
   | { type: 'typeLetter'; ch: string }
   | { type: 'selectSize'; n: number }
   | { type: 'openCustomWord' }
