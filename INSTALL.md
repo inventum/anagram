@@ -5,7 +5,7 @@ Both use the same word data and config file. Architecture: [docs/architecture.md
 
 ## 1. Prerequisites
 
-| Tool | Required version | Observed on this branch | Used for |
+| Tool | Required version | Observed on main | Used for |
 |------|------------------|-------------------------|----------|
 | Rust / Cargo | root crate `rust-version = "1.75"`; desktop `rust-version = "1.90"` | cargo 1.95.0 | All Rust builds and tests |
 | Node.js | `docs/SPEC-ui.md` §9 says "LTS"; TODO: pin an exact line | v26.4.0 | Desktop frontend (`ui-web/`) |
@@ -29,10 +29,9 @@ cargo install tauri-cli --version "^2" --locked
 ```sh
 git clone git@github.com:inventum/anagram.git
 cd anagram
-git checkout tauri-ui
 ```
 
-This needs SSH access to `github.com:inventum/anagram`. Branch `tauri-ui` holds the desktop work.
+This needs SSH access to `github.com:inventum/anagram`. The desktop app is on `main`.
 
 ## 3. Terminal app
 
