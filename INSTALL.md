@@ -103,6 +103,35 @@ cargo test -p anagram-desktop
 `cargo test` at the root covers only the terminal crate (`default-members = ["."]`). Use `cargo test --workspace` for both.
 `RUNBOOK_UI.md` runs the same commands with `--locked`.
 
+### Create an installable DMG
+
+Run from the repository root, after `npm --prefix ui-web install`:
+
+```sh
+cargo tauri build --bundles dmg
+```
+
+Output: `target/release/bundle/dmg/Anagram Desktop_0.1.0_aarch64.dmg` (9.1 MiB observed on Apple Silicon; the name is
+`<productName>_<version>_<arch>.dmg`). The `.app` is removed from `target/release/bundle/macos/` after packaging, so
+that directory is empty. The app is inside the DMG.
+
+Verify the image (mounts read-only; expect `Anagram Desktop.app` and an `Applications` link):
+
+```sh
+hdiutil attach -nobrowse -readonly -mountpoint /tmp/anagram-dmg-check "target/release/bundle/dmg/Anagram Desktop_0.1.0_aarch64.dmg"
+ls /tmp/anagram-dmg-check
+hdiutil detach /tmp/anagram-dmg-check
+```
+
+Install: open the DMG and drag `Anagram Desktop.app` onto `Applications`.
+
+Gatekeeper: the app is ad-hoc signed (`Signature=adhoc`, no Team ID) and not notarized. On first open, macOS blocks it.
+Right-click (or Control-click) `Anagram Desktop.app`, choose **Open**, then **Open** again. Alternatively, open
+System Settings > Privacy & Security and click **Open Anyway**.
+
+TODO: Developer ID signing and notarization are not configured. `spctl -a -vv` on the packaged app reports
+"code has no resources but signature indicates they must be present". Investigate before distributing the DMG.
+
 ## 5. Configuration
 
 Both front ends read `~/.config/anagram/config.toml`. The TUI accepts `--config PATH`; the desktop app always uses
